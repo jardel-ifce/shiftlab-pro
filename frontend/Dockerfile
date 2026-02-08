@@ -20,4 +20,4 @@ RUN npm install -g serve
 
 COPY --from=build /app/dist /app
 
-CMD ["sh", "-c", "serve /app -s -l $PORT"]
+CMD ["sh", "-c", "serve /app -s -l tcp://0.0.0.0:$PORT"]
