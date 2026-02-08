@@ -1,0 +1,173 @@
+[project]
+name = "shiftlab-pro"
+version = "0.1.0"
+description = "Sistema de Gerenciamento de Troca de Óleo de Câmbio para Oficinas Mecânicas"
+authors = [
+    {name = "ShiftLab", email = "contato@shiftlab.com.br"}
+]
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.11"
+keywords = ["fastapi", "automotive", "oil-change", "management"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Framework :: FastAPI",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+
+dependencies = [
+    # === FRAMEWORK WEB ===
+    "fastapi>=0.109.0",          # Framework web assíncrono de alta performance
+    "uvicorn[standard]>=0.27.0", # Servidor ASGI para rodar FastAPI
+
+    # === BANCO DE DADOS ===
+    "sqlalchemy>=2.0.25",        # ORM para mapeamento objeto-relacional
+    "alembic>=1.13.1",           # Migrations do banco de dados
+    "asyncpg>=0.29.0",           # Driver assíncrono para PostgreSQL
+    "aiosqlite>=0.19.0",         # Driver assíncrono para SQLite (desenvolvimento)
+
+    # === VALIDAÇÃO E SERIALIZAÇÃO ===
+    "pydantic>=2.5.3",           # Validação de dados e serialização
+    "pydantic-settings>=2.1.0", # Gerenciamento de configurações via .env
+    "email-validator>=2.1.0",    # Validação de emails
+
+    # === AUTENTICAÇÃO E SEGURANÇA ===
+    "python-jose[cryptography]>=3.3.0",  # JWT tokens
+    "passlib[bcrypt]>=1.7.4",            # Hash de senhas com bcrypt
+    "python-multipart>=0.0.6",           # Upload de arquivos e form data
+
+    # === UTILITÁRIOS ===
+    "httpx>=0.26.0",             # Cliente HTTP assíncrono
+    "python-dateutil>=2.8.2",   # Manipulação de datas
+]
+
+[project.optional-dependencies]
+# Dependências para desenvolvimento
+dev = [
+    # === TESTES ===
+    "pytest>=7.4.4",             # Framework de testes
+    "pytest-asyncio>=0.23.3",    # Suporte a testes assíncronos
+    "pytest-cov>=4.1.0",         # Cobertura de código
+    "httpx>=0.26.0",             # Cliente para testes de API
+    "factory-boy>=3.3.0",        # Factories para criar dados de teste
+    "faker>=22.0.0",             # Gerar dados falsos para testes
+
+    # === QUALIDADE DE CÓDIGO ===
+    "ruff>=0.1.11",              # Linter e formatter ultra-rápido
+    "mypy>=1.8.0",               # Verificação de tipos estática
+    "pre-commit>=3.6.0",         # Hooks de pré-commit
+
+    # === DEBUG ===
+    "ipython>=8.20.0",           # Shell interativo melhorado
+    "rich>=13.7.0",              # Output formatado no terminal
+]
+
+# Dependências para produção (relatórios, etc)
+prod = [
+    "gunicorn>=21.2.0",          # Servidor WSGI para produção
+    "reportlab>=4.0.8",          # Geração de PDFs
+    "openpyxl>=3.1.2",           # Geração de arquivos Excel
+]
+
+[project.urls]
+Homepage = "https://github.com/shiftlab/shiftlab-pro"
+Documentation = "https://github.com/shiftlab/shiftlab-pro#readme"
+Repository = "https://github.com/shiftlab/shiftlab-pro.git"
+Issues = "https://github.com/shiftlab/shiftlab-pro/issues"
+
+[project.scripts]
+# Comandos CLI personalizados
+shiftlab = "src.main:app"
+
+# === CONFIGURAÇÃO DO BUILD ===
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src"]
+
+# === CONFIGURAÇÃO DO RUFF (LINTER/FORMATTER) ===
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+select = [
+    "E",      # pycodestyle errors
+    "W",      # pycodestyle warnings
+    "F",      # Pyflakes
+    "I",      # isort (ordenação de imports)
+    "B",      # flake8-bugbear
+    "C4",     # flake8-comprehensions
+    "UP",     # pyupgrade
+    "ARG",    # flake8-unused-arguments
+    "SIM",    # flake8-simplify
+]
+ignore = [
+    "E501",   # line too long (gerenciado pelo formatter)
+    "B008",   # do not perform function calls in argument defaults
+    "B904",   # raise without from inside except
+]
+
+[tool.ruff.per-file-ignores]
+"tests/*" = ["ARG"]  # Argumentos não usados são comuns em fixtures
+
+[tool.ruff.isort]
+known-first-party = ["src"]
+
+# === CONFIGURAÇÃO DO PYTEST ===
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
+python_functions = ["test_*"]
+asyncio_mode = "auto"
+addopts = [
+    "-v",                        # Verbose
+    "--tb=short",                # Traceback curto
+    "--strict-markers",          # Markers devem ser declarados
+    "-ra",                       # Mostrar resumo de todos os testes
+]
+markers = [
+    "unit: Testes unitários (rápidos, sem I/O)",
+    "integration: Testes de integração (com banco de dados)",
+    "slow: Testes lentos",
+]
+filterwarnings = [
+    "ignore::DeprecationWarning",
+]
+
+# === CONFIGURAÇÃO DO MYPY (TYPE CHECKING) ===
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = true
+warn_unused_ignores = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+strict_optional = true
+plugins = ["pydantic.mypy"]
+
+[[tool.mypy.overrides]]
+module = ["tests.*"]
+disallow_untyped_defs = false
+
+# === CONFIGURAÇÃO DA COBERTURA DE TESTES ===
+[tool.coverage.run]
+source = ["src"]
+branch = true
+omit = [
+    "*/tests/*",
+    "*/__init__.py",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise NotImplementedError",
+    "if TYPE_CHECKING:",
+]
+fail_under = 80
+show_missing = true

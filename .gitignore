@@ -1,0 +1,14 @@
+# Arquivos de sistema
+.DS_Store
+
+# Claude Code
+.claude/
+
+# Ambiente virtual da raiz
+.venv/
+
+# Arquivos de prototipagem (não fazem parte do projeto)
+modelling/
+pdfs/
+generate_pdf*.py
+prototipo-ordem-servico.png

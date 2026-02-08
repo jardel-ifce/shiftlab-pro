@@ -1,0 +1,21 @@
+# =============================================================================
+# ShiftLab Pro - Dependências de Desenvolvimento
+# =============================================================================
+# Instalar: pip install -r requirements.txt -r requirements-dev.txt
+# =============================================================================
+
+# === TESTES ===
+pytest>=7.4.4
+pytest-asyncio>=0.23.3
+pytest-cov>=4.1.0
+factory-boy>=3.3.0
+faker>=22.0.0
+
+# === QUALIDADE DE CÓDIGO ===
+ruff>=0.1.11
+mypy>=1.8.0
+pre-commit>=3.6.0
+
+# === DEBUG ===
+ipython>=8.20.0
+rich>=13.7.0
