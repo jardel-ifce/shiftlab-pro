@@ -16,8 +16,9 @@ RUN npm run build
 # === Production stage ===
 FROM node:20-alpine
 
-RUN npm install -g serve
+WORKDIR /app
 
-COPY --from=build /app/dist /app
+COPY --from=build /app/dist ./dist
+COPY --from=build /app/server.js ./server.js
 
-CMD ["sh", "-c", "serve /app -s -l tcp://0.0.0.0:$PORT"]
+CMD ["node", "server.js"]
