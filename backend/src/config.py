@@ -56,6 +56,14 @@ class Settings(BaseSettings):
     DATABASE_MAX_OVERFLOW: int = 10
 
     @property
+    def async_database_url(self) -> str:
+        """Retorna DATABASE_URL com driver async (Railway envia postgresql://)."""
+        url = self.DATABASE_URL
+        if url.startswith("postgresql://"):
+            url = url.replace("postgresql://", "postgresql+asyncpg://", 1)
+        return url
+
+    @property
     def is_sqlite(self) -> bool:
         """Verifica se está usando SQLite."""
         return "sqlite" in self.DATABASE_URL.lower()

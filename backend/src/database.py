@@ -77,7 +77,7 @@ def get_engine_args() -> dict:
 
 # Engine assíncrono - gerencia conexões com o banco
 engine = create_async_engine(
-    settings.DATABASE_URL,
+    settings.async_database_url,
     **get_engine_args()
 )
 
