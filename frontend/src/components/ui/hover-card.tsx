@@ -33,7 +33,7 @@ function HoverCard({ children }: HoverCardProps) {
 
 function HoverCardTrigger({ children, className, ...props }: HoverCardTriggerProps) {
   const { setOpen, triggerRef } = React.useContext(HoverCardContext)
-  const timeoutRef = React.useRef<ReturnType<typeof setTimeout>>()
+  const timeoutRef = React.useRef<ReturnType<typeof setTimeout>>(undefined)
 
   function handleEnter() {
     clearTimeout(timeoutRef.current)
@@ -71,7 +71,7 @@ function HoverCardContent({
   ...props
 }: HoverCardContentProps) {
   const { open, setOpen } = React.useContext(HoverCardContext)
-  const timeoutRef = React.useRef<ReturnType<typeof setTimeout>>()
+  const timeoutRef = React.useRef<ReturnType<typeof setTimeout>>(undefined)
 
   function handleEnter() {
     clearTimeout(timeoutRef.current)
