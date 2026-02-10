@@ -17,5 +17,5 @@ COPY . .
 # Porta configurável pelo Railway
 ENV PORT=8000
 
-# Comando de execução
-CMD alembic upgrade head && uvicorn src.main:app --host 0.0.0.0 --port $PORT
+# Comando de execução (start.sh verifica alembic_version antes de migrar)
+CMD ["./start.sh"]
