@@ -77,7 +77,7 @@ class Settings(BaseSettings):
         description="Chave secreta para assinatura JWT"
     )
     JWT_ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 43200  # 30 dias
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
 
     @field_validator("SECRET_KEY")
