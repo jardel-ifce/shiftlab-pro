@@ -130,7 +130,7 @@ export function OleosPage() {
                             <img
                               src={`${BASE_URL}${oleo.foto_url}`}
                               alt={oleo.nome}
-                              className="h-40 w-full rounded-md object-cover"
+                              className="h-40 w-full rounded-md object-contain"
                             />
                             <p className="mt-2 text-center text-xs font-medium">
                               {oleo.marca} {oleo.nome}
@@ -218,7 +218,7 @@ export function OleosPage() {
               <img
                 src={`${BASE_URL}${fotoPreview.foto_url}`}
                 alt={fotoPreview.nome}
-                className="w-full rounded-md object-cover"
+                className="w-full rounded-md object-contain"
               />
               <div className="text-center">
                 <p className="font-semibold">{fotoPreview.marca} {fotoPreview.nome}</p>
