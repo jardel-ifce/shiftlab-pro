@@ -398,6 +398,11 @@ export function VeiculoFormPage() {
                 {errors.placa && <p className="text-xs text-destructive">{errors.placa.message}</p>}
               </div>
 
+              <div className="space-y-2">
+                <Label htmlFor="quilometragem_atual">Quilometragem</Label>
+                <Input id="quilometragem_atual" type="number" min={0} placeholder="0" {...register("quilometragem_atual")} />
+              </div>
+
               {/* MARCA */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
@@ -577,11 +582,6 @@ export function VeiculoFormPage() {
                     <option key={t.value} value={t.value}>{t.label}</option>
                   ))}
                 </select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="quilometragem_atual">Quilometragem</Label>
-                <Input id="quilometragem_atual" type="number" min={0} placeholder="0" {...register("quilometragem_atual")} />
               </div>
 
               <div className="space-y-2">
