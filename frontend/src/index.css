@@ -35,4 +35,10 @@
     @apply bg-background text-foreground;
     font-feature-settings: "rlig" 1, "calt" 1;
   }
+  /* Impede que inputs de data extrapolem containers no mobile (iOS Safari) */
+  input[type="date"] {
+    min-width: 0;
+    -webkit-appearance: none;
+    appearance: none;
+  }
 }

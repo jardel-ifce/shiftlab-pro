@@ -435,23 +435,23 @@ export function TrocaFormPage() {
               )}
 
               <div className="mt-3 grid grid-cols-2 gap-3">
-                <div>
+                <div className="min-w-0">
                   <p className="mb-1 text-xs text-muted-foreground">KM Atual *</p>
                   <Input
                     type="number"
                     min={0}
                     placeholder="0"
-                    className="h-9 text-sm"
+                    className="h-9 min-w-0 text-sm"
                     {...register("quilometragem_troca", { required: "KM é obrigatório" })}
                   />
                   {errors.quilometragem_troca && <p className="mt-1 text-xs text-destructive">{errors.quilometragem_troca.message}</p>}
                 </div>
-                <div>
+                <div className="min-w-0">
                   <p className="mb-1 text-xs text-muted-foreground">Data *</p>
                   <Input
                     type="date"
                     max={new Date().toISOString().split("T")[0]}
-                    className="h-9 text-sm"
+                    className="h-9 min-w-0 text-sm"
                     {...register("data_troca", { required: "Data é obrigatória" })}
                   />
                   {errors.data_troca && <p className="mt-1 text-xs text-destructive">{errors.data_troca.message}</p>}
@@ -657,21 +657,21 @@ export function TrocaFormPage() {
               Próxima Troca
             </p>
             <div className="grid grid-cols-2 gap-4">
-              <div>
+              <div className="min-w-0">
                 <p className="mb-1 text-xs text-muted-foreground">KM</p>
                 <Input
                   type="number"
                   min="0"
                   placeholder="Ex: 150000"
-                  className="h-9 text-sm"
+                  className="h-9 min-w-0 text-sm"
                   {...register("proxima_troca_km")}
                 />
               </div>
-              <div>
+              <div className="min-w-0">
                 <p className="mb-1 text-xs text-muted-foreground">Data</p>
                 <Input
                   type="date"
-                  className="h-9 text-sm"
+                  className="h-9 min-w-0 text-sm"
                   {...register("proxima_troca_data")}
                 />
               </div>
