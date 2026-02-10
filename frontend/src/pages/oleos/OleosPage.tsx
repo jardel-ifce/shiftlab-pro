@@ -69,7 +69,7 @@ export function OleosPage() {
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Buscar por nome ou marca..."
+            placeholder="Buscar por nome, marca ou tipo..."
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
             className="pl-9"
@@ -89,7 +89,8 @@ export function OleosPage() {
             <TableRow>
               <TableHead>Nome</TableHead>
               <TableHead>Marca</TableHead>
-              <TableHead>Tipo</TableHead>
+              <TableHead>Tipo Óleo</TableHead>
+              <TableHead>Formato</TableHead>
               <TableHead>Preço/L</TableHead>
               <TableHead>Estoque (L)</TableHead>
               <TableHead>Margem</TableHead>
@@ -100,14 +101,14 @@ export function OleosPage() {
             {isLoading ? (
               Array.from({ length: 5 }).map((_, i) => (
                 <TableRow key={i}>
-                  {Array.from({ length: 7 }).map((_, j) => (
+                  {Array.from({ length: 8 }).map((_, j) => (
                     <TableCell key={j}><Skeleton className="h-4 w-20" /></TableCell>
                   ))}
                 </TableRow>
               ))
             ) : data?.items.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
+                <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">
                   {search ? "Nenhum óleo encontrado." : "Nenhum óleo cadastrado."}
                 </TableCell>
               </TableRow>
@@ -145,8 +146,13 @@ export function OleosPage() {
                   </TableCell>
                   <TableCell>{oleo.marca}</TableCell>
                   <TableCell>
-                    <Badge variant="secondary">{oleo.tipo.toUpperCase()}</Badge>
+                    {oleo.tipo_oleo_transmissao ? (
+                      <Badge variant="secondary">{oleo.tipo_oleo_transmissao}</Badge>
+                    ) : (
+                      <span className="text-muted-foreground">-</span>
+                    )}
                   </TableCell>
+                  <TableCell>{oleo.formato_venda || <span className="text-muted-foreground">-</span>}</TableCell>
                   <TableCell>{formatCurrency(oleo.preco_litro)}</TableCell>
                   <TableCell>
                     <div className="flex items-center gap-1">

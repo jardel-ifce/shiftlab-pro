@@ -39,8 +39,7 @@ def get_service(db: AsyncSession = Depends(get_db)) -> OleoService:
 async def listar_oleos(
     skip: int = Query(0, ge=0),
     limit: int = Query(20, ge=1, le=100),
-    search: str | None = Query(None, description="Busca por nome ou marca"),
-    tipo: str | None = Query(None, description="Filtrar por tipo (atf, cvt, manual, etc)"),
+    search: str | None = Query(None, description="Busca por nome, marca ou tipo"),
     apenas_ativos: bool = Query(True, description="Mostrar apenas ativos"),
     estoque_baixo: bool = Query(False, description="Mostrar apenas com estoque baixo"),
     user: CurrentActiveUser = None,
@@ -51,7 +50,6 @@ async def listar_oleos(
         skip=skip,
         limit=limit,
         search=search,
-        tipo=tipo,
         apenas_ativos=apenas_ativos,
         estoque_baixo=estoque_baixo
     )

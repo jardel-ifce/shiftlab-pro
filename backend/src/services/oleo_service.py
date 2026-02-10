@@ -30,7 +30,6 @@ class OleoService:
         skip: int = 0,
         limit: int = 20,
         search: str | None = None,
-        tipo: str | None = None,
         apenas_ativos: bool = True,
         estoque_baixo: bool = False
     ) -> OleoListResponse:
@@ -40,9 +39,6 @@ class OleoService:
         if apenas_ativos:
             query = query.where(Oleo.ativo == True)  # noqa: E712
 
-        if tipo:
-            query = query.where(Oleo.tipo == tipo.lower())
-
         if estoque_baixo:
             query = query.where(Oleo.estoque_litros < Oleo.estoque_minimo)
 
@@ -50,7 +46,8 @@ class OleoService:
             search_term = f"%{search}%"
             query = query.where(
                 (Oleo.nome.ilike(search_term)) |
-                (Oleo.marca.ilike(search_term))
+                (Oleo.marca.ilike(search_term)) |
+                (Oleo.tipo_oleo_transmissao.ilike(search_term))
             )
 
         # Total
@@ -77,9 +74,16 @@ class OleoService:
         oleo = Oleo(
             nome=data.nome,
             marca=data.marca,
-            tipo=data.tipo,
+            modelo=data.modelo,
+            tipo_veiculo=data.tipo_veiculo,
             viscosidade=data.viscosidade,
-            especificacao=data.especificacao,
+            volume_unidade=data.volume_unidade,
+            volume_liquido=data.volume_liquido,
+            formato_venda=data.formato_venda,
+            tipo_recipiente=data.tipo_recipiente,
+            tipo_oleo_transmissao=data.tipo_oleo_transmissao,
+            desempenho=data.desempenho,
+            codigo_oem=data.codigo_oem,
             custo_litro=data.custo_litro,
             preco_litro=data.preco_litro,
             estoque_litros=data.estoque_litros,

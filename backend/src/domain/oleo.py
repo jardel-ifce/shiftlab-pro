@@ -6,21 +6,11 @@ Contém informações do produto e controle de estoque.
 """
 
 from decimal import Decimal
-from enum import Enum
 
-from sqlalchemy import Boolean, Integer, Numeric, String, Text
+from sqlalchemy import Boolean, Numeric, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.domain.base import BaseModel
-
-
-class TipoOleo(str, Enum):
-    """Tipos de óleo de câmbio."""
-    ATF = "atf"              # Automatic Transmission Fluid
-    CVT = "cvt"              # Para câmbios CVT
-    MANUAL = "manual"        # Para câmbios manuais
-    DUAL_CLUTCH = "dct"      # Para câmbios de dupla embreagem
-    UNIVERSAL = "universal"  # Multiuso
 
 
 class Oleo(BaseModel):
@@ -30,14 +20,23 @@ class Oleo(BaseModel):
     Attributes:
         nome: Nome comercial do produto
         marca: Fabricante do óleo
-        tipo: Tipo de óleo (ATF, CVT, Manual, etc)
-        viscosidade: Especificação de viscosidade (ex: 75W-90)
-        especificacao: Normas atendidas (ex: Dexron VI, ATF+4)
-        preco_litro: Preço por litro
+        modelo: Linha/modelo do produto (ex: ATF, Multi ATF)
+        tipo_veiculo: Tipo de veículo (ex: Carro, Caminhonete)
+        viscosidade: Grau de viscosidade (ex: 75W-90)
+        volume_unidade: Volume por unidade (ex: 1 L)
+        volume_liquido: Volume líquido (ex: 1 L)
+        formato_venda: Formato de venda (ex: Unidade, Caixa)
+        tipo_recipiente: Tipo de recipiente (ex: Garrafa plástica)
+        tipo_oleo_transmissao: Tipo de óleo de transmissão (ex: ATF Dexron VI)
+        desempenho: Desempenho do óleo (ex: Full Synthetic Multi-Vehicle)
+        codigo_oem: Código OEM (ex: GM General Motors)
+        custo_litro: Custo de aquisição por litro
+        preco_litro: Preço de venda por litro
         estoque_litros: Quantidade em estoque (litros)
         estoque_minimo: Alerta quando estoque abaixo deste valor
         ativo: Se o produto está disponível para uso
         observacoes: Notas adicionais
+        foto_url: Caminho da foto do produto
 
     Relationships:
         trocas: Trocas realizadas com este óleo
@@ -59,25 +58,66 @@ class Oleo(BaseModel):
         comment="Fabricante do óleo"
     )
 
-    tipo: Mapped[str] = mapped_column(
-        String(20),
-        default=TipoOleo.ATF.value,
-        nullable=False,
-        index=True,
-        comment="Tipo de óleo"
+    # Atributos de marketplace
+    modelo: Mapped[str | None] = mapped_column(
+        String(100),
+        nullable=True,
+        comment="Linha/modelo do produto (ex: ATF, Multi ATF)"
     )
 
-    # Especificações técnicas
+    tipo_veiculo: Mapped[str | None] = mapped_column(
+        String(50),
+        nullable=True,
+        comment="Tipo de veículo (ex: Carro, Caminhonete)"
+    )
+
     viscosidade: Mapped[str | None] = mapped_column(
         String(20),
         nullable=True,
-        comment="Especificação de viscosidade (ex: 75W-90)"
+        comment="Grau de viscosidade (ex: 75W-90)"
     )
 
-    especificacao: Mapped[str | None] = mapped_column(
+    volume_unidade: Mapped[str | None] = mapped_column(
+        String(20),
+        nullable=True,
+        comment="Volume por unidade (ex: 1 L, 946 mL)"
+    )
+
+    volume_liquido: Mapped[str | None] = mapped_column(
+        String(20),
+        nullable=True,
+        comment="Volume líquido (ex: 1 L)"
+    )
+
+    formato_venda: Mapped[str | None] = mapped_column(
+        String(30),
+        nullable=True,
+        comment="Formato de venda (ex: Unidade, Caixa, Galão)"
+    )
+
+    tipo_recipiente: Mapped[str | None] = mapped_column(
+        String(50),
+        nullable=True,
+        comment="Tipo de recipiente (ex: Garrafa plástica, Lata)"
+    )
+
+    tipo_oleo_transmissao: Mapped[str | None] = mapped_column(
         String(100),
         nullable=True,
-        comment="Normas atendidas (ex: Dexron VI)"
+        index=True,
+        comment="Tipo de óleo de transmissão (ex: ATF Dexron VI)"
+    )
+
+    desempenho: Mapped[str | None] = mapped_column(
+        String(100),
+        nullable=True,
+        comment="Desempenho do óleo (ex: Full Synthetic Multi-Vehicle)"
+    )
+
+    codigo_oem: Mapped[str | None] = mapped_column(
+        String(100),
+        nullable=True,
+        comment="Código OEM (ex: GM General Motors)"
     )
 
     # Preço e estoque
@@ -159,4 +199,4 @@ class Oleo(BaseModel):
         return f"{self.marca} {self.nome}"
 
     def __repr__(self) -> str:
-        return f"<Oleo(id={self.id}, nome='{self.nome}', tipo='{self.tipo}')>"
+        return f"<Oleo(id={self.id}, nome='{self.nome}', tipo='{self.tipo_oleo_transmissao}')>"

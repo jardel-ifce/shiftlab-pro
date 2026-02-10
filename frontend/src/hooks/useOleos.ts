@@ -4,14 +4,13 @@ import type { Oleo, OleoCreate, OleoListResponse, OleoUpdate } from "@/types/ole
 
 const KEY = "oleos"
 
-export function useOleos(page: number = 1, search?: string, tipo?: string) {
+export function useOleos(page: number = 1, search?: string) {
   const skip = (page - 1) * 20
   return useQuery<OleoListResponse>({
-    queryKey: [KEY, page, search, tipo],
+    queryKey: [KEY, page, search],
     queryFn: async () => {
       const params: Record<string, string | number | boolean> = { skip, limit: 20 }
       if (search) params.search = search
-      if (tipo) params.tipo = tipo
       const { data } = await api.get<OleoListResponse>("/oleos", { params })
       return data
     },

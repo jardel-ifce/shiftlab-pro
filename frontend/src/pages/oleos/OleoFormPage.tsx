@@ -10,7 +10,7 @@ import {
   useUploadFotoOleo,
   useDeleteFotoOleo,
 } from "@/hooks/useOleos"
-import { TIPOS_OLEO } from "@/types/oleo"
+import { TIPOS_VEICULO, FORMATOS_VENDA, TIPOS_RECIPIENTE } from "@/types/oleo"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -26,19 +26,21 @@ import {
 } from "@/lib/masks"
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8001"
-// Remove /api/v1 suffix to get the base URL for static files
 const BASE_URL = API_URL.replace(/\/api\/v1\/?$/, "")
 
 interface FormData {
   nome: string
   marca: string
-  tipo: string
+  modelo: string
+  tipo_veiculo: string
   viscosidade: string
-  especificacao: string
-  custo_litro: string
-  preco_litro: string
-  estoque_litros: string
-  estoque_minimo: string
+  volume_unidade: string
+  volume_liquido: string
+  formato_venda: string
+  tipo_recipiente: string
+  tipo_oleo_transmissao: string
+  desempenho: string
+  codigo_oem: string
   observacoes: string
 }
 
@@ -71,13 +73,16 @@ export function OleoFormPage() {
       reset({
         nome: oleo.nome,
         marca: oleo.marca,
-        tipo: oleo.tipo,
+        modelo: oleo.modelo || "",
+        tipo_veiculo: oleo.tipo_veiculo || "",
         viscosidade: oleo.viscosidade || "",
-        especificacao: oleo.especificacao || "",
-        custo_litro: "",
-        preco_litro: "",
-        estoque_litros: "",
-        estoque_minimo: "",
+        volume_unidade: oleo.volume_unidade || "",
+        volume_liquido: oleo.volume_liquido || "",
+        formato_venda: oleo.formato_venda || "",
+        tipo_recipiente: oleo.tipo_recipiente || "",
+        tipo_oleo_transmissao: oleo.tipo_oleo_transmissao || "",
+        desempenho: oleo.desempenho || "",
+        codigo_oem: oleo.codigo_oem || "",
         observacoes: oleo.observacoes || "",
       })
       setCustoLitro(numberToMoeda(oleo.custo_litro))
@@ -141,9 +146,16 @@ export function OleoFormPage() {
       const payload = {
         nome: formData.nome,
         marca: formData.marca,
-        tipo: formData.tipo,
+        modelo: formData.modelo || null,
+        tipo_veiculo: formData.tipo_veiculo || null,
         viscosidade: formData.viscosidade || null,
-        especificacao: formData.especificacao || null,
+        volume_unidade: formData.volume_unidade || null,
+        volume_liquido: formData.volume_liquido || null,
+        formato_venda: formData.formato_venda || null,
+        tipo_recipiente: formData.tipo_recipiente || null,
+        tipo_oleo_transmissao: formData.tipo_oleo_transmissao || null,
+        desempenho: formData.desempenho || null,
+        codigo_oem: formData.codigo_oem || null,
         custo_litro: parseMoeda(custoLitro) || 0,
         preco_litro: precoValue,
         estoque_litros: parseDecimal(estoqueLitros) || 0,
@@ -181,7 +193,7 @@ export function OleoFormPage() {
 
   if (isEditing && isLoading) {
     return (
-      <div className="mx-auto max-w-2xl space-y-6">
+      <div className="mx-auto max-w-3xl space-y-6">
         <Skeleton className="h-8 w-48" />
         <Card><CardContent className="space-y-4 pt-6">
           {Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}
@@ -194,7 +206,7 @@ export function OleoFormPage() {
   const fotoAtual = oleo?.foto_url ? `${BASE_URL}${oleo.foto_url}` : null
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6">
+    <div className="mx-auto max-w-3xl space-y-6">
       <div className="flex items-center gap-4">
         <Button variant="ghost" size="icon" onClick={() => navigate("/oleos")}>
           <ArrowLeft className="h-4 w-4" />
@@ -209,71 +221,69 @@ export function OleoFormPage() {
         </div>
       </div>
 
-      <Card>
-        <CardHeader><CardTitle>Dados do Produto</CardTitle></CardHeader>
-        <CardContent>
-          {/* Seção de Foto */}
-          <div className="mb-6 space-y-3">
-            <Label>Foto do Produto</Label>
-            <div className="flex items-start gap-4">
-              {/* Preview */}
-              <div className="relative flex h-32 w-32 shrink-0 items-center justify-center overflow-hidden rounded-lg border-2 border-dashed border-muted-foreground/25 bg-muted/50">
-                {fotoPreview ? (
-                  <>
-                    <img src={fotoPreview} alt="Preview" className="h-full w-full object-cover" />
-                    <button
-                      type="button"
-                      onClick={handleRemovePreview}
-                      className="absolute -right-1 -top-1 rounded-full bg-destructive p-1 text-destructive-foreground shadow-sm hover:bg-destructive/90"
-                    >
-                      <Trash2 className="h-3 w-3" />
-                    </button>
-                  </>
-                ) : fotoAtual && !fotoFile ? (
-                  <>
-                    <img src={fotoAtual} alt="Foto atual" className="h-full w-full object-cover" />
-                    <button
-                      type="button"
-                      onClick={handleDeleteFoto}
-                      disabled={deleteFotoMutation.isPending}
-                      className="absolute -right-1 -top-1 rounded-full bg-destructive p-1 text-destructive-foreground shadow-sm hover:bg-destructive/90"
-                    >
-                      {deleteFotoMutation.isPending ? (
-                        <Loader2 className="h-3 w-3 animate-spin" />
-                      ) : (
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+        {/* Card 1: Identificação do Produto */}
+        <Card>
+          <CardHeader><CardTitle>Identificação do Produto</CardTitle></CardHeader>
+          <CardContent className="space-y-4">
+            {/* Seção de Foto */}
+            <div className="space-y-3">
+              <Label>Foto do Produto</Label>
+              <div className="flex items-start gap-4">
+                <div className="relative flex h-32 w-32 shrink-0 items-center justify-center overflow-hidden rounded-lg border-2 border-dashed border-muted-foreground/25 bg-muted/50">
+                  {fotoPreview ? (
+                    <>
+                      <img src={fotoPreview} alt="Preview" className="h-full w-full object-cover" />
+                      <button
+                        type="button"
+                        onClick={handleRemovePreview}
+                        className="absolute -right-1 -top-1 rounded-full bg-destructive p-1 text-destructive-foreground shadow-sm hover:bg-destructive/90"
+                      >
                         <Trash2 className="h-3 w-3" />
-                      )}
-                    </button>
-                  </>
-                ) : (
-                  <ImagePlus className="h-8 w-8 text-muted-foreground/50" />
-                )}
-              </div>
-
-              {/* Botão de upload */}
-              <div className="space-y-2">
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/jpeg,image/png"
-                  onChange={handleFileSelect}
-                  className="hidden"
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => fileInputRef.current?.click()}
-                >
-                  <ImagePlus className="mr-2 h-4 w-4" />
-                  Escolher Imagem
-                </Button>
-                <p className="text-xs text-muted-foreground">JPG ou PNG, máx. 10MB</p>
+                      </button>
+                    </>
+                  ) : fotoAtual && !fotoFile ? (
+                    <>
+                      <img src={fotoAtual} alt="Foto atual" className="h-full w-full object-cover" />
+                      <button
+                        type="button"
+                        onClick={handleDeleteFoto}
+                        disabled={deleteFotoMutation.isPending}
+                        className="absolute -right-1 -top-1 rounded-full bg-destructive p-1 text-destructive-foreground shadow-sm hover:bg-destructive/90"
+                      >
+                        {deleteFotoMutation.isPending ? (
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                        ) : (
+                          <Trash2 className="h-3 w-3" />
+                        )}
+                      </button>
+                    </>
+                  ) : (
+                    <ImagePlus className="h-8 w-8 text-muted-foreground/50" />
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png"
+                    onChange={handleFileSelect}
+                    className="hidden"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    <ImagePlus className="mr-2 h-4 w-4" />
+                    Escolher Imagem
+                  </Button>
+                  <p className="text-xs text-muted-foreground">JPG ou PNG, máx. 10MB</p>
+                </div>
               </div>
             </div>
-          </div>
 
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="nome">Nome *</Label>
@@ -288,28 +298,84 @@ export function OleoFormPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="tipo">Tipo *</Label>
-                <select
-                  id="tipo"
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                  {...register("tipo", { required: "Selecione o tipo" })}
-                >
-                  {TIPOS_OLEO.map((t) => (
-                    <option key={t.value} value={t.value}>{t.label}</option>
-                  ))}
-                </select>
+                <Label htmlFor="modelo">Modelo</Label>
+                <Input id="modelo" placeholder="ATF, Multi ATF..." {...register("modelo")} />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="viscosidade">Viscosidade</Label>
+                <Label htmlFor="tipo_oleo_transmissao">Tipo de Óleo de Transmissão</Label>
+                <Input id="tipo_oleo_transmissao" placeholder="ATF Dexron VI, CVT NS-3..." {...register("tipo_oleo_transmissao")} />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Card 2: Características do Produto */}
+        <Card>
+          <CardHeader><CardTitle>Características do Produto</CardTitle></CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid gap-4 sm:grid-cols-3">
+              <div className="space-y-2">
+                <Label htmlFor="tipo_veiculo">Tipo de Veículo</Label>
+                <Input id="tipo_veiculo" list="tipos-veiculo" placeholder="Carro, Caminhonete..." {...register("tipo_veiculo")} />
+                <datalist id="tipos-veiculo">
+                  {TIPOS_VEICULO.map((t) => <option key={t} value={t} />)}
+                </datalist>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="viscosidade">Grau de Viscosidade</Label>
                 <Input id="viscosidade" placeholder="75W-90, ATF+4..." {...register("viscosidade")} />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="especificacao">Especificação</Label>
-                <Input id="especificacao" placeholder="Dexron VI, Mercon V..." {...register("especificacao")} />
+                <Label htmlFor="desempenho">Desempenho do Óleo</Label>
+                <Input id="desempenho" placeholder="Full Synthetic..." {...register("desempenho")} />
+              </div>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="volume_unidade">Volume da Unidade</Label>
+                <Input id="volume_unidade" placeholder="1 L, 946 mL..." {...register("volume_unidade")} />
               </div>
 
+              <div className="space-y-2">
+                <Label htmlFor="volume_liquido">Volume Líquido</Label>
+                <Input id="volume_liquido" placeholder="1 L..." {...register("volume_liquido")} />
+              </div>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-3">
+              <div className="space-y-2">
+                <Label htmlFor="formato_venda">Formato de Venda</Label>
+                <Input id="formato_venda" list="formatos-venda" placeholder="Unidade, Caixa..." {...register("formato_venda")} />
+                <datalist id="formatos-venda">
+                  {FORMATOS_VENDA.map((f) => <option key={f} value={f} />)}
+                </datalist>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="tipo_recipiente">Tipo de Recipiente</Label>
+                <Input id="tipo_recipiente" list="tipos-recipiente" placeholder="Garrafa plástica..." {...register("tipo_recipiente")} />
+                <datalist id="tipos-recipiente">
+                  {TIPOS_RECIPIENTE.map((t) => <option key={t} value={t} />)}
+                </datalist>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="codigo_oem">Código OEM</Label>
+                <Input id="codigo_oem" placeholder="GM, Toyota..." {...register("codigo_oem")} />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Card 3: Preço e Estoque */}
+        <Card>
+          <CardHeader><CardTitle>Preço e Estoque</CardTitle></CardHeader>
+          <CardContent>
+            <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="custo_litro">Custo/Litro (R$)</Label>
                 <Input
@@ -332,7 +398,6 @@ export function OleoFormPage() {
                   value={precoLitro}
                   onChange={(e) => setPrecoLitro(formatMoeda(e.target.value))}
                 />
-                {!precoLitro && errors.preco_litro && <p className="text-xs text-destructive">{errors.preco_litro.message}</p>}
               </div>
 
               <div className="space-y-2">
@@ -359,26 +424,29 @@ export function OleoFormPage() {
                 />
               </div>
             </div>
+          </CardContent>
+        </Card>
 
-            <div className="space-y-2">
-              <Label htmlFor="observacoes">Observações</Label>
-              <textarea
-                id="observacoes"
-                className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                placeholder="Observações..."
-                {...register("observacoes")}
-              />
-            </div>
+        {/* Card 4: Observações */}
+        <Card>
+          <CardHeader><CardTitle>Observações</CardTitle></CardHeader>
+          <CardContent>
+            <textarea
+              id="observacoes"
+              className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              placeholder="Observações sobre o produto..."
+              {...register("observacoes")}
+            />
+          </CardContent>
+        </Card>
 
-            <div className="flex gap-3 pt-4">
-              <Button type="submit" disabled={isPending}>
-                {isPending ? "Salvando..." : isEditing ? "Atualizar" : "Cadastrar"}
-              </Button>
-              <Button type="button" variant="outline" onClick={() => navigate("/oleos")}>Cancelar</Button>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
+        <div className="flex gap-3">
+          <Button type="submit" disabled={isPending}>
+            {isPending ? "Salvando..." : isEditing ? "Atualizar" : "Cadastrar"}
+          </Button>
+          <Button type="button" variant="outline" onClick={() => navigate("/oleos")}>Cancelar</Button>
+        </div>
+      </form>
     </div>
   )
 }

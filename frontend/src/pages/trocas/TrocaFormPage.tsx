@@ -492,7 +492,7 @@ export function TrocaFormPage() {
                 <option value="">Selecione o óleo...</option>
                 {oleosData?.items.filter((o) => o.ativo).map((o) => (
                   <option key={o.id} value={o.id}>
-                    {o.nome} ({o.marca}) — R$ {Number(o.preco_litro).toFixed(2)}/L — Est: {Number(o.estoque_litros).toFixed(1)}L
+                    {o.nome} ({o.marca}){o.tipo_oleo_transmissao ? ` — ${o.tipo_oleo_transmissao}` : ""} — R$ {Number(o.preco_litro).toFixed(2)}/L — Est: {Number(o.estoque_litros).toFixed(1)}L
                   </option>
                 ))}
               </select>

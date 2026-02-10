@@ -120,7 +120,8 @@ export async function gerarPdfTroca(trocaId: number) {
 
   box(marginL, y, contentW, rowH)
   doc.text(String(rowNum), colX[0] + 2, y + 4)
-  doc.text(`${troca.oleo.nome} (${troca.oleo.marca})`, colX[1] + 2, y + 4)
+  const oleoDesc = `${troca.oleo.nome} (${troca.oleo.marca})${troca.oleo.tipo_oleo_transmissao ? ` - ${troca.oleo.tipo_oleo_transmissao}` : ""}`
+  doc.text(oleoDesc, colX[1] + 2, y + 4)
   doc.text("L", colX[2] + cols[2] / 2, y + 4, { align: "center" })
   doc.text(oleoQtd.toFixed(1), colX[3] + cols[3] / 2, y + 4, { align: "center" })
   doc.text(`R$ ${R(oleoUnit)}`, colX[5] - 2, y + 4, { align: "right" })

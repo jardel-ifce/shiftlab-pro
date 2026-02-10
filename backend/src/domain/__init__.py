@@ -18,7 +18,7 @@ from src.domain.cliente import Cliente
 from src.domain.item_troca import ItemTroca
 from src.domain.modelo_referencia import ModeloReferencia
 from src.domain.montadora import Montadora
-from src.domain.oleo import Oleo, TipoOleo
+from src.domain.oleo import Oleo
 from src.domain.peca import Peca
 from src.domain.servico import Servico
 from src.domain.troca_oleo import TrocaOleo
@@ -30,7 +30,7 @@ __all__ = [
     "Veiculo",
     "TipoCambio",
     "Oleo",
-    "TipoOleo",
+
     "Peca",
     "Servico",
     "ItemTroca",

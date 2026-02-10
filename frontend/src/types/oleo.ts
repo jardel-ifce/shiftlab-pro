@@ -2,9 +2,16 @@ export interface Oleo {
   id: number
   nome: string
   marca: string
-  tipo: string
+  modelo: string | null
+  tipo_veiculo: string | null
   viscosidade: string | null
-  especificacao: string | null
+  volume_unidade: string | null
+  volume_liquido: string | null
+  formato_venda: string | null
+  tipo_recipiente: string | null
+  tipo_oleo_transmissao: string | null
+  desempenho: string | null
+  codigo_oem: string | null
   custo_litro: string
   preco_litro: string
   estoque_litros: string
@@ -22,9 +29,16 @@ export interface Oleo {
 export interface OleoCreate {
   nome: string
   marca: string
-  tipo?: string
+  modelo?: string | null
+  tipo_veiculo?: string | null
   viscosidade?: string | null
-  especificacao?: string | null
+  volume_unidade?: string | null
+  volume_liquido?: string | null
+  formato_venda?: string | null
+  tipo_recipiente?: string | null
+  tipo_oleo_transmissao?: string | null
+  desempenho?: string | null
+  codigo_oem?: string | null
   custo_litro?: number
   preco_litro?: number
   estoque_litros?: number
@@ -35,9 +49,16 @@ export interface OleoCreate {
 export interface OleoUpdate {
   nome?: string
   marca?: string
-  tipo?: string
+  modelo?: string | null
+  tipo_veiculo?: string | null
   viscosidade?: string | null
-  especificacao?: string | null
+  volume_unidade?: string | null
+  volume_liquido?: string | null
+  formato_venda?: string | null
+  tipo_recipiente?: string | null
+  tipo_oleo_transmissao?: string | null
+  desempenho?: string | null
+  codigo_oem?: string | null
   custo_litro?: number
   preco_litro?: number
   estoque_litros?: number
@@ -53,10 +74,27 @@ export interface OleoListResponse {
   pages: number
 }
 
-export const TIPOS_OLEO = [
-  { value: "atf", label: "ATF" },
-  { value: "cvt", label: "CVT" },
-  { value: "manual", label: "Manual" },
-  { value: "dct", label: "Dupla Embreagem (DCT)" },
-  { value: "universal", label: "Universal" },
+export const TIPOS_VEICULO = [
+  "Carro",
+  "Caminhonete",
+  "Carro/Caminhonete",
+  "Moto",
+  "Caminhão",
+  "Van",
+] as const
+
+export const FORMATOS_VENDA = [
+  "Unidade",
+  "Caixa",
+  "Galão",
+  "Balde",
+  "Kit",
+] as const
+
+export const TIPOS_RECIPIENTE = [
+  "Garrafa plástica",
+  "Lata",
+  "Balde",
+  "Tambor",
+  "Galão",
 ] as const
