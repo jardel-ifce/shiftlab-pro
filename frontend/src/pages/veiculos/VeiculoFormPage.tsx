@@ -390,9 +390,11 @@ export function VeiculoFormPage() {
                   placeholder="ABC1D23"
                   maxLength={10}
                   disabled={isEditing}
+                  className="uppercase"
                   {...register("placa", {
                     required: "Placa é obrigatória",
                     pattern: { value: /^[A-Za-z]{3}\d[A-Za-z0-9]\d{2}$/, message: "Formato: ABC1234 ou ABC1D23" },
+                    onChange: (e) => { e.target.value = e.target.value.toUpperCase() },
                   })}
                 />
                 {errors.placa && <p className="text-xs text-destructive">{errors.placa.message}</p>}
