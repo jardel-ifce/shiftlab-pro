@@ -13,13 +13,18 @@ import { Skeleton } from "@/components/ui/skeleton"
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog"
+import { HoverCard, HoverCardTrigger, HoverCardContent } from "@/components/ui/hover-card"
 import type { Oleo } from "@/types/oleo"
+
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8001"
+const BASE_URL = API_URL.replace(/\/api\/v1\/?$/, "")
 
 export function OleosPage() {
   const [page, setPage] = useState(1)
   const [search, setSearch] = useState("")
   const [searchInput, setSearchInput] = useState("")
   const [deleteTarget, setDeleteTarget] = useState<Oleo | null>(null)
+  const [fotoPreview, setFotoPreview] = useState<Oleo | null>(null)
 
   const { data, isLoading } = useOleos(page, search || undefined)
   const deleteMutation = useDeleteOleo()
@@ -110,7 +115,32 @@ export function OleosPage() {
               data?.items.map((oleo) => (
                 <TableRow key={oleo.id}>
                   <TableCell className="font-medium">
-                    {oleo.nome}
+                    {oleo.foto_url ? (
+                      <span className="relative inline-block">
+                        <HoverCard>
+                          <HoverCardTrigger>
+                            <span
+                              className="cursor-pointer underline-offset-4 hover:underline"
+                              onClick={() => setFotoPreview(oleo)}
+                            >
+                              {oleo.nome}
+                            </span>
+                          </HoverCardTrigger>
+                          <HoverCardContent side="right" className="w-52 p-2">
+                            <img
+                              src={`${BASE_URL}${oleo.foto_url}`}
+                              alt={oleo.nome}
+                              className="h-40 w-full rounded-md object-cover"
+                            />
+                            <p className="mt-2 text-center text-xs font-medium">
+                              {oleo.marca} {oleo.nome}
+                            </p>
+                          </HoverCardContent>
+                        </HoverCard>
+                      </span>
+                    ) : (
+                      oleo.nome
+                    )}
                     {oleo.viscosidade && <span className="ml-1 text-muted-foreground text-xs">({oleo.viscosidade})</span>}
                   </TableCell>
                   <TableCell>{oleo.marca}</TableCell>
@@ -177,6 +207,27 @@ export function OleosPage() {
               {deleteMutation.isPending ? "Desativando..." : "Desativar"}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog de preview da foto (mobile) */}
+      <Dialog open={!!fotoPreview} onOpenChange={() => setFotoPreview(null)}>
+        <DialogContent onClose={() => setFotoPreview(null)} className="max-w-sm">
+          {fotoPreview?.foto_url && (
+            <div className="space-y-3">
+              <img
+                src={`${BASE_URL}${fotoPreview.foto_url}`}
+                alt={fotoPreview.nome}
+                className="w-full rounded-md object-cover"
+              />
+              <div className="text-center">
+                <p className="font-semibold">{fotoPreview.marca} {fotoPreview.nome}</p>
+                {fotoPreview.viscosidade && (
+                  <p className="text-sm text-muted-foreground">{fotoPreview.viscosidade}</p>
+                )}
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>
