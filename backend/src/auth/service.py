@@ -160,19 +160,31 @@ class AuthService:
     async def create_first_admin(self) -> User | None:
         """
         Cria o primeiro usuário administrador se não existir nenhum.
+        Se já existir, sincroniza a senha com a variável de ambiente.
 
         Usado na inicialização do sistema para garantir que
-        sempre exista pelo menos um admin.
+        sempre exista pelo menos um admin acessível.
 
         Returns:
-            User: Admin criado, ou None se já existir
+            User: Admin criado/atualizado, ou None se já estava ok
         """
-        # Verifica se já existe algum admin
+        # Busca admin pelo email configurado
+        admin = await self.get_user_by_email(settings.FIRST_ADMIN_EMAIL)
+
+        if admin:
+            # Admin existe — sincroniza senha se divergiu
+            if not verify_password(settings.FIRST_ADMIN_PASSWORD, admin.hashed_password):
+                admin.hashed_password = hash_password(settings.FIRST_ADMIN_PASSWORD)
+                admin.is_active = True
+                await self.db.flush()
+                await self.db.refresh(admin)
+                return admin  # sinaliza que houve reset
+            return None
+
+        # Verifica se existe outro admin (com email diferente)
         query = select(User).where(User.role == UserRole.ADMIN)
         result = await self.db.execute(query)
-        existing_admin = result.scalar_one_or_none()
-
-        if existing_admin:
+        if result.scalar_one_or_none():
             return None
 
         # Cria o admin usando dados do .env

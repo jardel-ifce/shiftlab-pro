@@ -303,6 +303,10 @@ app.include_router(
 # ARQUIVOS ESTÁTICOS (uploads)
 # =============================================================================
 
+# Cria diretório de uploads no import (antes do lifespan)
+# para evitar RuntimeError do StaticFiles em produção
+Path(settings.UPLOAD_DIR).mkdir(parents=True, exist_ok=True)
+
 app.mount(
     "/uploads",
     StaticFiles(directory=settings.UPLOAD_DIR),
