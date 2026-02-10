@@ -10,6 +10,7 @@ export interface Oleo {
   estoque_litros: string
   estoque_minimo: string
   observacoes: string | null
+  foto_url: string | null
   ativo: boolean
   estoque_baixo: boolean
   margem_lucro: string

@@ -53,12 +53,14 @@ class OleoUpdate(BaseModel):
     estoque_minimo: Decimal | None = Field(None, ge=0)
     ativo: bool | None = Field(None)
     observacoes: str | None = Field(None)
+    foto_url: str | None = Field(None, description="Caminho da foto do produto")
 
 
 class OleoResponse(OleoBase):
     """Schema de resposta com dados do banco."""
     id: int
     ativo: bool
+    foto_url: str | None = Field(None, description="Caminho da foto do produto")
     created_at: datetime
     updated_at: datetime
     estoque_baixo: bool = Field(description="Se estoque está abaixo do mínimo")

@@ -70,3 +70,29 @@ export function useDeleteOleo() {
     onSuccess: () => qc.invalidateQueries({ queryKey: [KEY] }),
   })
 }
+
+export function useUploadFotoOleo() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, file }: { id: number; file: File }) => {
+      const formData = new FormData()
+      formData.append("file", file)
+      const { data } = await api.post<Oleo>(`/oleos/${id}/foto`, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      })
+      return data
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: [KEY] }),
+  })
+}
+
+export function useDeleteFotoOleo() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (id: number) => {
+      const { data } = await api.delete<Oleo>(`/oleos/${id}/foto`)
+      return data
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: [KEY] }),
+  })
+}

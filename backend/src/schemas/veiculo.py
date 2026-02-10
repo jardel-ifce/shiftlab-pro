@@ -17,7 +17,7 @@ class VeiculoBase(BaseModel):
     """Campos comuns para Veículo."""
     placa: str = Field(..., min_length=7, max_length=10, description="Placa do veículo")
     marca: str = Field(..., min_length=2, max_length=50, description="Marca")
-    modelo: str = Field(..., min_length=1, max_length=50, description="Modelo")
+    modelo: str = Field(..., min_length=1, max_length=200, description="Modelo")
     ano: int = Field(..., ge=1900, le=2100, description="Ano de fabricação")
     tipo_cambio: str = Field(TipoCambio.AUTOMATICO.value, description="Tipo de câmbio")
     quilometragem_atual: int = Field(0, ge=0, description="Quilometragem atual")
@@ -52,7 +52,7 @@ class VeiculoCreate(VeiculoBase):
 class VeiculoUpdate(BaseModel):
     """Schema para atualizar veículo (todos opcionais)."""
     marca: str | None = Field(None, min_length=2, max_length=50)
-    modelo: str | None = Field(None, min_length=1, max_length=50)
+    modelo: str | None = Field(None, min_length=1, max_length=200)
     ano: int | None = Field(None, ge=1900, le=2100)
     tipo_cambio: str | None = Field(None)
     quilometragem_atual: int | None = Field(None, ge=0)

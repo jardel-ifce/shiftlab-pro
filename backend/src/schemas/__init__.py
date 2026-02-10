@@ -6,6 +6,8 @@ Contém todos os schemas de validação para a API:
 - VeiculoCreate, VeiculoResponse, etc.
 - OleoCreate, OleoResponse, etc.
 - TrocaOleoCreate, TrocaOleoResponse, etc.
+- MontadoraCreate, MontadoraResponse, etc.
+- ModeloReferenciaCreate, ModeloReferenciaResponse, etc.
 
 Uso:
     from src.schemas import ClienteCreate, ClienteResponse
@@ -16,6 +18,19 @@ from src.schemas.cliente import (
     ClienteListResponse,
     ClienteResponse,
     ClienteUpdate,
+)
+from src.schemas.modelo_referencia import (
+    ModeloReferenciaCreate,
+    ModeloReferenciaListResponse,
+    ModeloReferenciaResponse,
+    ModeloReferenciaUpdate,
+)
+from src.schemas.montadora import (
+    MontadoraComModelosResponse,
+    MontadoraCreate,
+    MontadoraListResponse,
+    MontadoraResponse,
+    MontadoraUpdate,
 )
 from src.schemas.oleo import (
     OleoCreate,
@@ -76,4 +91,15 @@ __all__ = [
     "TrocaOleoDetailResponse",
     "TrocaOleoListResponse",
     "ProximasTrocasResponse",
+    # Montadora
+    "MontadoraCreate",
+    "MontadoraUpdate",
+    "MontadoraResponse",
+    "MontadoraComModelosResponse",
+    "MontadoraListResponse",
+    # Modelo Referência
+    "ModeloReferenciaCreate",
+    "ModeloReferenciaUpdate",
+    "ModeloReferenciaResponse",
+    "ModeloReferenciaListResponse",
 ]

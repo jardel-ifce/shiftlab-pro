@@ -13,12 +13,15 @@ Para acessar a documentação:
 """
 
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 
+from src.api.v1.catalogo import router as catalogo_router
 from src.api.v1.clientes import router as clientes_router
 from src.api.v1.oleos import router as oleos_router
 from src.api.v1.pecas import router as pecas_router
@@ -53,6 +56,11 @@ async def lifespan(app: FastAPI):
     print(f"📍 Ambiente: {settings.ENVIRONMENT}")
     print(f"🔗 Banco: {settings.DATABASE_URL[:50]}...")
     print("=" * 60)
+
+    # Cria diretório de uploads se não existir
+    uploads_dir = Path(settings.UPLOAD_DIR) / "oleos"
+    uploads_dir.mkdir(parents=True, exist_ok=True)
+    print(f"📁 Uploads: {uploads_dir.resolve()}")
 
     # Cria tabelas novas (dev only — em produção usar Alembic)
     await create_all_tables()
@@ -283,6 +291,22 @@ app.include_router(
 app.include_router(
     trocas_router,
     prefix=settings.API_PREFIX,
+)
+
+# Catálogo Router - /api/v1/catalogo/*
+app.include_router(
+    catalogo_router,
+    prefix=settings.API_PREFIX,
+)
+
+# =============================================================================
+# ARQUIVOS ESTÁTICOS (uploads)
+# =============================================================================
+
+app.mount(
+    "/uploads",
+    StaticFiles(directory=settings.UPLOAD_DIR),
+    name="uploads",
 )
 
 

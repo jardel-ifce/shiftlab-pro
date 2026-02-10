@@ -4,10 +4,14 @@ Router de Óleos - ShiftLab Pro.
 Endpoints para gerenciamento de óleos (produtos).
 """
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+import time
+from pathlib import Path
+
+from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.auth.dependencies import CurrentActiveUser, CurrentAdminUser
+from src.config import settings
 from src.database import get_db
 from src.schemas.oleo import (
     OleoCreate,
@@ -183,3 +187,100 @@ async def desativar_oleo(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=str(e)
         )
+
+
+# =============================================================================
+# UPLOAD DE FOTO
+# =============================================================================
+
+UPLOAD_DIR = Path(settings.UPLOAD_DIR) / "oleos"
+
+
+@router.post(
+    "/{oleo_id}/foto",
+    response_model=OleoResponse,
+    summary="Upload de foto do óleo",
+    description="Envia uma imagem do produto (JPG/PNG, máx 10MB). Requer admin.",
+)
+async def upload_foto(
+    oleo_id: int,
+    file: UploadFile,
+    user: CurrentAdminUser = None,
+    service: OleoService = Depends(get_service),
+    db: AsyncSession = Depends(get_db),
+) -> OleoResponse:
+    """Faz upload da foto de um óleo."""
+    oleo = await service.get_by_id(oleo_id)
+    if not oleo:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Óleo não encontrado",
+        )
+
+    # Validar extensão
+    ext = (file.filename or "").rsplit(".", 1)[-1].lower()
+    if ext not in ("jpg", "jpeg", "png"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Formato inválido. Use JPG ou PNG.",
+        )
+
+    # Validar tamanho
+    contents = await file.read()
+    if len(contents) > settings.max_upload_size_bytes:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Arquivo muito grande. Máximo: {settings.MAX_UPLOAD_SIZE_MB}MB",
+        )
+
+    # Deletar foto anterior se existir
+    if oleo.foto_url:
+        old_path = Path(settings.UPLOAD_DIR) / oleo.foto_url.removeprefix("/uploads/")
+        if old_path.exists():
+            old_path.unlink()
+
+    # Salvar novo arquivo
+    filename = f"{oleo_id}_{int(time.time())}.{ext}"
+    filepath = UPLOAD_DIR / filename
+    filepath.write_bytes(contents)
+
+    # Atualizar no banco
+    oleo.foto_url = f"/uploads/oleos/{filename}"
+    await db.flush()
+    await db.refresh(oleo)
+    await db.commit()
+
+    return OleoResponse.model_validate(oleo)
+
+
+@router.delete(
+    "/{oleo_id}/foto",
+    response_model=OleoResponse,
+    summary="Remover foto do óleo",
+    description="Remove a imagem do produto. Requer admin.",
+)
+async def remover_foto(
+    oleo_id: int,
+    user: CurrentAdminUser = None,
+    service: OleoService = Depends(get_service),
+    db: AsyncSession = Depends(get_db),
+) -> OleoResponse:
+    """Remove a foto de um óleo."""
+    oleo = await service.get_by_id(oleo_id)
+    if not oleo:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Óleo não encontrado",
+        )
+
+    if oleo.foto_url:
+        old_path = Path(settings.UPLOAD_DIR) / oleo.foto_url.removeprefix("/uploads/")
+        if old_path.exists():
+            old_path.unlink()
+
+    oleo.foto_url = None
+    await db.flush()
+    await db.refresh(oleo)
+    await db.commit()
+
+    return OleoResponse.model_validate(oleo)

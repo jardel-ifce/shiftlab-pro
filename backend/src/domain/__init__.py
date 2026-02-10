@@ -6,6 +6,8 @@ Contém todos os modelos SQLAlchemy do sistema:
 - Veiculo: Veículos cadastrados
 - Oleo: Tipos de óleo disponíveis
 - TrocaOleo: Histórico de trocas
+- Montadora: Catálogo de marcas
+- ModeloReferencia: Catálogo de modelos
 
 Uso:
     from src.domain import Cliente, Veiculo, Oleo, TrocaOleo
@@ -14,6 +16,8 @@ Uso:
 from src.domain.base import BaseModel
 from src.domain.cliente import Cliente
 from src.domain.item_troca import ItemTroca
+from src.domain.modelo_referencia import ModeloReferencia
+from src.domain.montadora import Montadora
 from src.domain.oleo import Oleo, TipoOleo
 from src.domain.peca import Peca
 from src.domain.servico import Servico
@@ -31,4 +35,6 @@ __all__ = [
     "Servico",
     "ItemTroca",
     "TrocaOleo",
+    "Montadora",
+    "ModeloReferencia",
 ]

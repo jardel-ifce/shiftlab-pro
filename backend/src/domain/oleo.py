@@ -123,6 +123,12 @@ class Oleo(BaseModel):
         comment="Notas adicionais"
     )
 
+    foto_url: Mapped[str | None] = mapped_column(
+        String(255),
+        nullable=True,
+        comment="Caminho da foto do produto"
+    )
+
     # Relacionamentos
     trocas: Mapped[list["TrocaOleo"]] = relationship(
         "TrocaOleo",

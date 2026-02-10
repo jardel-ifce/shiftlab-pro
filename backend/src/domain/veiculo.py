@@ -69,7 +69,7 @@ class Veiculo(BaseModel):
     )
 
     modelo: Mapped[str] = mapped_column(
-        String(50),
+        String(200),
         nullable=False,
         comment="Modelo do veículo"
     )

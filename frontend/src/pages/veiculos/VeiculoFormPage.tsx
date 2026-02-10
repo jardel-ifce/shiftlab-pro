@@ -5,8 +5,15 @@ import { toast } from "sonner"
 import { ArrowLeft, Loader2, CheckCircle2, X } from "lucide-react"
 import { useVeiculo, useCreateVeiculo, useUpdateVeiculo } from "@/hooks/useVeiculos"
 import { useBuscaCliente } from "@/hooks/useClientes"
+import {
+  useMontadoras,
+  useModelosByMontadora,
+  useFipeMarcas,
+  useFipeModelos,
+} from "@/hooks/useCatalogo"
 import { formatCpfCnpj } from "@/lib/masks"
 import { TIPOS_CAMBIO } from "@/types/veiculo"
+import type { ModeloReferencia } from "@/types/catalogo"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -24,6 +31,10 @@ interface FormData {
   observacoes: string
 }
 
+type FonteCatalogo = "local" | "fipe"
+
+const selectClass = "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+
 export function VeiculoFormPage() {
   const { id } = useParams()
   const [searchParams] = useSearchParams()
@@ -37,7 +48,28 @@ export function VeiculoFormPage() {
   const createMutation = useCreateVeiculo()
   const updateMutation = useUpdateVeiculo()
 
-  const { register, handleSubmit, reset, formState: { errors } } = useForm<FormData>()
+  const { register, handleSubmit, reset, setValue, formState: { errors } } = useForm<FormData>()
+
+  // Fonte do catálogo (local ou FIPE)
+  const [fonte, setFonte] = useState<FonteCatalogo>("local")
+
+  // Catálogo local
+  const { data: montadorasData } = useMontadoras()
+  const [selectedMontadoraId, setSelectedMontadoraId] = useState<number | undefined>()
+  const [modoManualMarca, setModoManualMarca] = useState(false)
+  const [modoManualModelo, setModoManualModelo] = useState(false)
+  const { data: modelosData } = useModelosByMontadora(selectedMontadoraId)
+
+  const montadoras = montadorasData?.items ?? []
+  const modelos = modelosData?.items ?? []
+
+  // FIPE
+  const [selectedFipeMarcaCode, setSelectedFipeMarcaCode] = useState<string | undefined>()
+  const { data: fipeMarcas, isLoading: loadingFipeMarcas } = useFipeMarcas(fonte === "fipe")
+  const { data: fipeModelos, isLoading: loadingFipeModelos } = useFipeModelos(
+    selectedFipeMarcaCode,
+    fonte === "fipe"
+  )
 
   // Pre-select client from query param (e.g. /veiculos/novo?cliente=5)
   useEffect(() => {
@@ -48,22 +80,35 @@ export function VeiculoFormPage() {
     }
   }, [isEditing, cliente, searchParams, carregarPorId])
 
-  // When editing, load the client from the vehicle's cliente_id
+  // When editing, load the client and try to match catalog
   useEffect(() => {
-    if (veiculo) {
-      carregarPorId(veiculo.cliente_id)
-      reset({
-        placa: veiculo.placa,
-        marca: veiculo.marca,
-        modelo: veiculo.modelo,
-        ano: veiculo.ano,
-        tipo_cambio: veiculo.tipo_cambio,
-        quilometragem_atual: veiculo.quilometragem_atual,
-        cor: veiculo.cor || "",
-        observacoes: veiculo.observacoes || "",
-      })
+    if (!veiculo) return
+
+    carregarPorId(veiculo.cliente_id)
+    reset({
+      placa: veiculo.placa,
+      marca: veiculo.marca,
+      modelo: veiculo.modelo,
+      ano: veiculo.ano,
+      tipo_cambio: veiculo.tipo_cambio,
+      quilometragem_atual: veiculo.quilometragem_atual,
+      cor: veiculo.cor || "",
+      observacoes: veiculo.observacoes || "",
+    })
+
+    // Try to match marca with local catalog
+    if (montadoras.length > 0) {
+      const match = montadoras.find(
+        (m) => m.nome.toUpperCase() === veiculo.marca.toUpperCase()
+      )
+      if (match) {
+        setSelectedMontadoraId(match.id)
+      } else {
+        setModoManualMarca(true)
+        setModoManualModelo(true)
+      }
     }
-  }, [veiculo, reset, carregarPorId])
+  }, [veiculo, reset, carregarPorId, montadoras.length])
 
   function handleSearchChange(value: string) {
     setSearchInput(value)
@@ -73,6 +118,105 @@ export function VeiculoFormPage() {
   function handleLimparCliente() {
     setSearchInput("")
     limpar()
+  }
+
+  function handleFonteChange(novaFonte: FonteCatalogo) {
+    setFonte(novaFonte)
+    setSelectedMontadoraId(undefined)
+    setSelectedFipeMarcaCode(undefined)
+    setModoManualMarca(false)
+    setModoManualModelo(false)
+    setValue("marca", "")
+    setValue("modelo", "")
+  }
+
+  // === LOCAL catalog handlers ===
+
+  function handleMarcaChange(value: string) {
+    if (value === "__manual__") {
+      setModoManualMarca(true)
+      setModoManualModelo(true)
+      setSelectedMontadoraId(undefined)
+      setValue("marca", "")
+      setValue("modelo", "")
+      return
+    }
+
+    const montadoraId = Number(value)
+    const montadora = montadoras.find((m) => m.id === montadoraId)
+    if (montadora) {
+      setSelectedMontadoraId(montadora.id)
+      setModoManualMarca(false)
+      setModoManualModelo(false)
+      setValue("marca", montadora.nome)
+      setValue("modelo", "")
+    }
+  }
+
+  function handleModeloChange(value: string) {
+    if (value === "__manual__") {
+      setModoManualModelo(true)
+      setValue("modelo", "")
+      return
+    }
+
+    const modeloId = Number(value)
+    const modelo = modelos.find((m: ModeloReferencia) => m.id === modeloId)
+    if (modelo) {
+      setModoManualModelo(false)
+      setValue("modelo", modelo.descricao)
+
+      if (modelo.tipo_cambio) {
+        setValue("tipo_cambio", modelo.tipo_cambio)
+      }
+      if (modelo.ano_inicio) {
+        setValue("ano", modelo.ano_inicio)
+      }
+    }
+  }
+
+  function voltarParaCatalogo() {
+    setModoManualMarca(false)
+    setModoManualModelo(false)
+    setSelectedMontadoraId(undefined)
+    setValue("marca", "")
+    setValue("modelo", "")
+  }
+
+  // === FIPE handlers ===
+
+  function handleFipeMarcaChange(value: string) {
+    if (value === "__manual__") {
+      setModoManualMarca(true)
+      setModoManualModelo(true)
+      setSelectedFipeMarcaCode(undefined)
+      setValue("marca", "")
+      setValue("modelo", "")
+      return
+    }
+
+    const marca = fipeMarcas?.find((m) => m.code === value)
+    if (marca) {
+      setSelectedFipeMarcaCode(marca.code)
+      setModoManualMarca(false)
+      setModoManualModelo(false)
+      setValue("marca", marca.name.toUpperCase())
+      setValue("modelo", "")
+    }
+  }
+
+  function handleFipeModeloChange(value: string) {
+    if (value === "__manual__") {
+      setModoManualModelo(true)
+      setValue("modelo", "")
+      return
+    }
+
+    const modelo = fipeModelos?.find((m) => m.code === value)
+    if (modelo) {
+      setModoManualModelo(false)
+      setValue("modelo", modelo.name.toUpperCase())
+    }
   }
 
   async function onSubmit(formData: FormData) {
@@ -205,6 +349,38 @@ export function VeiculoFormPage() {
             {erro && <p className="text-xs text-destructive">{erro}</p>}
           </div>
 
+          {/* Toggle fonte do catálogo */}
+          <div className="mb-4 flex items-center gap-2">
+            <span className="text-sm text-muted-foreground">Fonte:</span>
+            <div className="inline-flex rounded-md border">
+              <button
+                type="button"
+                className={`px-3 py-1.5 text-xs font-medium transition-colors ${
+                  fonte === "local"
+                    ? "bg-primary text-primary-foreground"
+                    : "hover:bg-muted"
+                } rounded-l-md`}
+                onClick={() => handleFonteChange("local")}
+              >
+                Catálogo Local
+              </button>
+              <button
+                type="button"
+                className={`px-3 py-1.5 text-xs font-medium transition-colors ${
+                  fonte === "fipe"
+                    ? "bg-primary text-primary-foreground"
+                    : "hover:bg-muted"
+                } rounded-r-md`}
+                onClick={() => handleFonteChange("fipe")}
+              >
+                Tabela FIPE
+              </button>
+            </div>
+            {fonte === "fipe" && (
+              <span className="text-xs text-muted-foreground">(dados da Tabela FIPE)</span>
+            )}
+          </div>
+
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
@@ -222,21 +398,171 @@ export function VeiculoFormPage() {
                 {errors.placa && <p className="text-xs text-destructive">{errors.placa.message}</p>}
               </div>
 
+              {/* MARCA */}
               <div className="space-y-2">
-                <Label htmlFor="marca">Marca *</Label>
-                <Input id="marca" placeholder="Toyota, Honda..." {...register("marca", { required: "Marca é obrigatória", minLength: { value: 2, message: "Mínimo 2 caracteres" } })} />
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="marca">Marca *</Label>
+                  {modoManualMarca && (
+                    <button
+                      type="button"
+                      className="text-xs text-primary hover:underline"
+                      onClick={fonte === "fipe" ? () => {
+                        setModoManualMarca(false)
+                        setModoManualModelo(false)
+                        setSelectedFipeMarcaCode(undefined)
+                        setValue("marca", "")
+                        setValue("modelo", "")
+                      } : voltarParaCatalogo}
+                    >
+                      Usar catálogo
+                    </button>
+                  )}
+                </div>
+
+                {modoManualMarca ? (
+                  <Input
+                    id="marca"
+                    placeholder="Digite a marca..."
+                    {...register("marca", { required: "Marca é obrigatória", minLength: { value: 2, message: "Mínimo 2 caracteres" } })}
+                  />
+                ) : fonte === "local" ? (
+                  <select
+                    id="marca"
+                    className={selectClass}
+                    value={selectedMontadoraId ?? ""}
+                    onChange={(e) => handleMarcaChange(e.target.value)}
+                  >
+                    <option value="" disabled>Selecione a marca...</option>
+                    {montadoras.map((m) => (
+                      <option key={m.id} value={m.id}>{m.nome}</option>
+                    ))}
+                    <option value="__manual__">-- Outra (digitar) --</option>
+                  </select>
+                ) : (
+                  /* FIPE marca select */
+                  <select
+                    id="marca"
+                    className={selectClass}
+                    value={selectedFipeMarcaCode ?? ""}
+                    onChange={(e) => handleFipeMarcaChange(e.target.value)}
+                    disabled={loadingFipeMarcas}
+                  >
+                    <option value="" disabled>
+                      {loadingFipeMarcas ? "Carregando marcas..." : "Selecione a marca..."}
+                    </option>
+                    {fipeMarcas?.map((m) => (
+                      <option key={m.code} value={m.code}>{m.name}</option>
+                    ))}
+                    <option value="__manual__">-- Outra (digitar) --</option>
+                  </select>
+                )}
+                {/* Hidden field for react-hook-form */}
+                {!modoManualMarca && (
+                  <input type="hidden" {...register("marca", { required: "Marca é obrigatória" })} />
+                )}
                 {errors.marca && <p className="text-xs text-destructive">{errors.marca.message}</p>}
               </div>
 
+              {/* MODELO */}
               <div className="space-y-2">
-                <Label htmlFor="modelo">Modelo *</Label>
-                <Input id="modelo" placeholder="Corolla, Civic..." {...register("modelo", { required: "Modelo é obrigatório" })} />
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="modelo">Modelo *</Label>
+                  {modoManualModelo && !modoManualMarca && (
+                    <button
+                      type="button"
+                      className="text-xs text-primary hover:underline"
+                      onClick={() => {
+                        setModoManualModelo(false)
+                        setValue("modelo", "")
+                      }}
+                    >
+                      Usar catálogo
+                    </button>
+                  )}
+                </div>
+
+                {modoManualModelo || modoManualMarca ? (
+                  <Input
+                    id="modelo"
+                    placeholder="Digite o modelo..."
+                    {...register("modelo", { required: "Modelo é obrigatório" })}
+                  />
+                ) : fonte === "local" ? (
+                  /* LOCAL modelo select */
+                  selectedMontadoraId ? (
+                    <>
+                      <select
+                        id="modelo-select"
+                        className={selectClass}
+                        defaultValue=""
+                        onChange={(e) => handleModeloChange(e.target.value)}
+                      >
+                        <option value="" disabled>Selecione o modelo...</option>
+                        {modelos.map((m: ModeloReferencia) => (
+                          <option key={m.id} value={m.id}>{m.descricao}</option>
+                        ))}
+                        <option value="__manual__">-- Outro (digitar) --</option>
+                      </select>
+                      <input type="hidden" {...register("modelo", { required: "Modelo é obrigatório" })} />
+                    </>
+                  ) : (
+                    <>
+                      <Input
+                        id="modelo"
+                        placeholder="Selecione a marca primeiro..."
+                        disabled
+                      />
+                      <input type="hidden" {...register("modelo", { required: "Modelo é obrigatório" })} />
+                    </>
+                  )
+                ) : (
+                  /* FIPE modelo select */
+                  selectedFipeMarcaCode ? (
+                    <>
+                      <select
+                        id="modelo-select"
+                        className={selectClass}
+                        defaultValue=""
+                        onChange={(e) => handleFipeModeloChange(e.target.value)}
+                        disabled={loadingFipeModelos}
+                      >
+                        <option value="" disabled>
+                          {loadingFipeModelos ? "Carregando modelos..." : "Selecione o modelo..."}
+                        </option>
+                        {fipeModelos?.map((m) => (
+                          <option key={m.code} value={m.code}>{m.name}</option>
+                        ))}
+                        <option value="__manual__">-- Outro (digitar) --</option>
+                      </select>
+                      <input type="hidden" {...register("modelo", { required: "Modelo é obrigatório" })} />
+                    </>
+                  ) : (
+                    <>
+                      <Input
+                        id="modelo"
+                        placeholder="Selecione a marca primeiro..."
+                        disabled
+                      />
+                      <input type="hidden" {...register("modelo", { required: "Modelo é obrigatório" })} />
+                    </>
+                  )
+                )}
                 {errors.modelo && <p className="text-xs text-destructive">{errors.modelo.message}</p>}
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="ano">Ano *</Label>
-                <Input id="ano" type="number" min={1900} max={currentYear + 1} {...register("ano", { required: "Ano é obrigatório", min: { value: 1900, message: "Ano inválido" }, max: { value: currentYear + 1, message: "Ano inválido" } })} />
+                <Input
+                  id="ano"
+                  type="number"
+                  min={1900}
+                  max={currentYear + 1}
+                  {...register("ano", {
+                    required: "Ano é obrigatório",
+                    min: { value: 1900, message: "Ano inválido" },
+                    max: { value: currentYear + 1, message: "Ano inválido" },
+                  })}
+                />
                 {errors.ano && <p className="text-xs text-destructive">{errors.ano.message}</p>}
               </div>
 
@@ -244,7 +570,7 @@ export function VeiculoFormPage() {
                 <Label htmlFor="tipo_cambio">Tipo de Câmbio *</Label>
                 <select
                   id="tipo_cambio"
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  className={selectClass}
                   {...register("tipo_cambio", { required: "Selecione o tipo de câmbio" })}
                 >
                   {TIPOS_CAMBIO.map((t) => (
