@@ -49,6 +49,7 @@ class TrocaOleoService:
                 selectinload(TrocaOleo.oleo),
                 selectinload(TrocaOleo.user),
                 selectinload(TrocaOleo.itens).selectinload(ItemTroca.peca),
+                selectinload(TrocaOleo.itens).selectinload(ItemTroca.filtro),
             )
             .where(TrocaOleo.id == troca_id)
         )
@@ -101,6 +102,7 @@ class TrocaOleoService:
                 selectinload(TrocaOleo.oleo),
                 selectinload(TrocaOleo.user),
                 selectinload(TrocaOleo.itens).selectinload(ItemTroca.peca),
+                selectinload(TrocaOleo.itens).selectinload(ItemTroca.filtro),
             )
             .offset(skip)
             .limit(limit)
@@ -143,25 +145,40 @@ class TrocaOleoService:
         if data.quilometragem_troca < veiculo.quilometragem_atual:
             raise ValueError("Quilometragem não pode ser menor que a atual do veículo")
 
-        # Valida peças e calcula valor total das peças
-        pecas_to_deduct: list[tuple[Peca, Decimal]] = []
+        # Valida itens (peças e filtros) e calcula valor total
+        items_to_deduct: list[tuple] = []  # (obj, quantidade, tipo)
         valor_pecas = Decimal("0")
 
         for item_data in data.itens:
-            peca_query = select(Peca).where(Peca.id == item_data.peca_id)
-            peca = await self.db.scalar(peca_query)
-            if not peca:
-                raise ValueError(f"Peça ID {item_data.peca_id} não encontrada")
-            if not peca.ativo:
-                raise ValueError(f"Peça '{peca.nome}' está inativa")
-            if peca.estoque < item_data.quantidade:
-                raise ValueError(
-                    f"Estoque insuficiente para '{peca.nome}'. "
-                    f"Disponível: {peca.estoque}, Solicitado: {item_data.quantidade}"
-                )
+            if item_data.peca_id:
+                peca_query = select(Peca).where(Peca.id == item_data.peca_id)
+                peca = await self.db.scalar(peca_query)
+                if not peca:
+                    raise ValueError(f"Peça ID {item_data.peca_id} não encontrada")
+                if not peca.ativo:
+                    raise ValueError(f"Peça '{peca.nome}' está inativa")
+                if peca.estoque < item_data.quantidade:
+                    raise ValueError(
+                        f"Estoque insuficiente para '{peca.nome}'. "
+                        f"Disponível: {peca.estoque}, Solicitado: {item_data.quantidade}"
+                    )
+                items_to_deduct.append((peca, item_data.quantidade, "peca"))
+            elif item_data.filtro_id:
+                filtro_query = select(FiltroOleo).where(FiltroOleo.id == item_data.filtro_id)
+                filtro = await self.db.scalar(filtro_query)
+                if not filtro:
+                    raise ValueError(f"Filtro ID {item_data.filtro_id} não encontrado")
+                if not filtro.ativo:
+                    raise ValueError(f"Filtro '{filtro.nome}' está inativo")
+                if filtro.estoque < item_data.quantidade:
+                    raise ValueError(
+                        f"Estoque insuficiente para '{filtro.nome}'. "
+                        f"Disponível: {filtro.estoque}, Solicitado: {item_data.quantidade}"
+                    )
+                items_to_deduct.append((filtro, item_data.quantidade, "filtro"))
+
             item_total = item_data.quantidade * item_data.valor_unitario
             valor_pecas += item_total
-            pecas_to_deduct.append((peca, item_data.quantidade))
 
         # Calcula valor total com descontos e taxa
         subtotal = data.valor_oleo + data.valor_servico + valor_pecas
@@ -202,19 +219,21 @@ class TrocaOleoService:
         # Baixa estoque do óleo
         oleo.estoque_litros -= data.quantidade_litros
 
-        # Cria itens e baixa estoque das peças (com snapshot do custo)
+        # Cria itens e baixa estoque (com snapshot do custo)
         for i, item_data in enumerate(data.itens):
-            peca_obj, quantidade = pecas_to_deduct[i]
+            obj, quantidade, tipo = items_to_deduct[i]
+            custo = obj.preco_custo if tipo == "peca" else obj.custo_unitario
             item = ItemTroca(
                 troca=troca,
                 peca_id=item_data.peca_id,
+                filtro_id=item_data.filtro_id,
                 quantidade=item_data.quantidade,
                 valor_unitario=item_data.valor_unitario,
                 valor_total=item_data.quantidade * item_data.valor_unitario,
-                custo_unitario=peca_obj.preco_custo,
+                custo_unitario=custo,
             )
             self.db.add(item)
-            peca_obj.estoque -= quantidade
+            obj.estoque -= quantidade
 
         await self.db.flush()
 
@@ -245,40 +264,58 @@ class TrocaOleoService:
         if new_items_data is not None:
             # Restaura estoque dos itens antigos
             for old_item in troca.itens:
-                peca_query = select(Peca).where(Peca.id == old_item.peca_id)
-                peca = await self.db.scalar(peca_query)
-                if peca:
-                    peca.estoque += old_item.quantidade
+                if old_item.peca_id:
+                    peca = await self.db.scalar(select(Peca).where(Peca.id == old_item.peca_id))
+                    if peca:
+                        peca.estoque += old_item.quantidade
+                elif old_item.filtro_id:
+                    filtro = await self.db.scalar(select(FiltroOleo).where(FiltroOleo.id == old_item.filtro_id))
+                    if filtro:
+                        filtro.estoque += int(old_item.quantidade)
                 await self.db.delete(old_item)
 
             # Valida e cria novos itens
             for item_dict in new_items_data:
-                peca_query = select(Peca).where(Peca.id == item_dict["peca_id"])
-                peca = await self.db.scalar(peca_query)
-                if not peca:
-                    raise ValueError(f"Peça ID {item_dict['peca_id']} não encontrada")
-                if not peca.ativo:
-                    raise ValueError(f"Peça '{peca.nome}' está inativa")
-
+                peca_id = item_dict.get("peca_id")
+                filtro_id = item_dict.get("filtro_id")
                 qty = Decimal(str(item_dict["quantidade"]))
                 unit_price = Decimal(str(item_dict["valor_unitario"]))
+                custo = Decimal("0")
 
-                if peca.estoque < qty:
-                    raise ValueError(f"Estoque insuficiente para '{peca.nome}'")
+                if peca_id:
+                    peca = await self.db.scalar(select(Peca).where(Peca.id == peca_id))
+                    if not peca:
+                        raise ValueError(f"Peça ID {peca_id} não encontrada")
+                    if not peca.ativo:
+                        raise ValueError(f"Peça '{peca.nome}' está inativa")
+                    if peca.estoque < qty:
+                        raise ValueError(f"Estoque insuficiente para '{peca.nome}'")
+                    custo = peca.preco_custo
+                    peca.estoque -= qty
+                elif filtro_id:
+                    filtro = await self.db.scalar(select(FiltroOleo).where(FiltroOleo.id == filtro_id))
+                    if not filtro:
+                        raise ValueError(f"Filtro ID {filtro_id} não encontrado")
+                    if not filtro.ativo:
+                        raise ValueError(f"Filtro '{filtro.nome}' está inativo")
+                    if filtro.estoque < qty:
+                        raise ValueError(f"Estoque insuficiente para '{filtro.nome}'")
+                    custo = filtro.custo_unitario
+                    filtro.estoque -= int(qty)
 
                 item_total = qty * unit_price
                 valor_pecas += item_total
 
                 item = ItemTroca(
                     troca=troca,
-                    peca_id=item_dict["peca_id"],
+                    peca_id=peca_id,
+                    filtro_id=filtro_id,
                     quantidade=qty,
                     valor_unitario=unit_price,
                     valor_total=item_total,
-                    custo_unitario=peca.preco_custo,
+                    custo_unitario=custo,
                 )
                 self.db.add(item)
-                peca.estoque -= qty
         else:
             # Itens não alterados — soma existentes para recálculo do total
             for existing_item in troca.itens:
@@ -333,12 +370,16 @@ class TrocaOleoService:
         if oleo:
             oleo.estoque_litros += troca.quantidade_litros
 
-        # Devolve estoque das peças
+        # Devolve estoque das peças e filtros
         for item in troca.itens:
-            peca_query = select(Peca).where(Peca.id == item.peca_id)
-            peca = await self.db.scalar(peca_query)
-            if peca:
-                peca.estoque += item.quantidade
+            if item.peca_id:
+                peca = await self.db.scalar(select(Peca).where(Peca.id == item.peca_id))
+                if peca:
+                    peca.estoque += item.quantidade
+            elif item.filtro_id:
+                filtro = await self.db.scalar(select(FiltroOleo).where(FiltroOleo.id == item.filtro_id))
+                if filtro:
+                    filtro.estoque += int(item.quantidade)
 
         await self.db.delete(troca)
         await self.db.flush()
@@ -535,6 +576,7 @@ class TrocaOleoService:
                 selectinload(TrocaOleo.veiculo).selectinload(Veiculo.cliente),
                 selectinload(TrocaOleo.oleo),
                 selectinload(TrocaOleo.itens).selectinload(ItemTroca.peca),
+                selectinload(TrocaOleo.itens).selectinload(ItemTroca.filtro),
             )
             .offset(skip)
             .limit(limit)
@@ -561,9 +603,14 @@ class TrocaOleoService:
 
             itens_fin = []
             for item in t.itens:
+                nome = None
+                if item.peca:
+                    nome = item.peca.nome
+                elif item.filtro:
+                    nome = item.filtro.nome
                 itens_fin.append(ItemTrocaFinanceiroResponse(
                     id=item.id,
-                    peca_nome=item.peca.nome if item.peca else None,
+                    peca_nome=nome,
                     quantidade=item.quantidade,
                     valor_unitario=item.valor_unitario,
                     valor_total=item.valor_total,

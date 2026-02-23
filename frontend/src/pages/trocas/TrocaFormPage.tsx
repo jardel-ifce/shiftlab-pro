@@ -8,6 +8,7 @@ import { useBuscaCliente } from "@/hooks/useClientes"
 import { useAllVeiculos } from "@/hooks/useVeiculos"
 import { useAllOleos } from "@/hooks/useOleos"
 import { useAllPecas } from "@/hooks/usePecas"
+import { useAllFiltros } from "@/hooks/useFiltros"
 import { useAllServicos } from "@/hooks/useServicos"
 import { formatCpfCnpj } from "@/lib/masks"
 import type { ItemTrocaCreate } from "@/types/troca"
@@ -32,10 +33,22 @@ interface FormData {
   observacoes: string
 }
 
-interface ItemPeca {
-  peca_id: string
+interface ItemProduto {
+  tipo: "peca" | "filtro"
+  produto_id: string
+  nome: string
   quantidade: string
   valor_unitario: string
+}
+
+interface ProdutoBusca {
+  tipo: "peca" | "filtro"
+  id: number
+  nome: string
+  marca: string | null
+  preco: number
+  estoque: number
+  unidade: string
 }
 
 const DRAFT_KEY = "shiftlab_troca_draft"
@@ -43,7 +56,7 @@ const DRAFT_KEY = "shiftlab_troca_draft"
 interface DraftState {
   form: Partial<FormData>
   clienteId: number | null
-  itensPecas: ItemPeca[]
+  itensProdutos: ItemProduto[]
 }
 
 function saveDraft(state: DraftState) {
@@ -63,6 +76,137 @@ function clearDraft() {
   sessionStorage.removeItem(DRAFT_KEY)
 }
 
+function ItemRowAutocomplete({
+  index, item, itemTotal, produtos, onSelect, onClear, onChangeQty, onChangePrice, onRemove, R,
+}: {
+  index: number
+  item: ItemProduto
+  itemTotal: number
+  produtos: ProdutoBusca[]
+  onSelect: (p: ProdutoBusca) => void
+  onClear: () => void
+  onChangeQty: (v: string) => void
+  onChangePrice: (v: string) => void
+  onRemove: () => void
+  R: (v: number) => string
+}) {
+  const [busca, setBusca] = useState("")
+  const [aberto, setAberto] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+
+  const filtrados = useMemo(() => {
+    if (!busca) return produtos
+    const lower = busca.toLowerCase()
+    return produtos.filter(
+      (p) => p.nome.toLowerCase().includes(lower) || (p.marca?.toLowerCase().includes(lower))
+    )
+  }, [busca, produtos])
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    function handle(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setAberto(false)
+    }
+    document.addEventListener("mousedown", handle)
+    return () => document.removeEventListener("mousedown", handle)
+  }, [])
+
+  const selecionado = !!item.produto_id
+
+  return (
+    <div className="grid grid-cols-[40px_1fr_60px_70px_90px_90px_40px] items-center gap-1 border-b border-zinc-200 px-2 py-1.5 dark:border-zinc-700">
+      <span className="text-center text-xs text-muted-foreground">{index + 2}</span>
+
+      {/* Autocomplete */}
+      <div className="relative" ref={ref}>
+        {selecionado ? (
+          <div className="flex h-8 items-center gap-1 rounded border border-input bg-background px-1">
+            <span className={`inline-flex items-center rounded px-1 text-[10px] font-semibold uppercase leading-none ${item.tipo === "filtro" ? "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300" : "bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"}`}>
+              {item.tipo === "filtro" ? "Filtro" : "Peça"}
+            </span>
+            <span className="flex-1 truncate text-xs">{item.nome}</span>
+            <button type="button" className="shrink-0 text-muted-foreground hover:text-foreground" onClick={onClear}>
+              <X className="h-3 w-3" />
+            </button>
+          </div>
+        ) : (
+          <>
+            <Input
+              placeholder="Buscar peça ou filtro..."
+              className="h-8 text-xs"
+              value={busca}
+              onChange={(e) => { setBusca(e.target.value); setAberto(true) }}
+              onFocus={() => setAberto(true)}
+              autoComplete="off"
+            />
+            {aberto && filtrados.length > 0 && (
+              <div className="absolute z-20 mt-1 w-full rounded-md border bg-popover shadow-md">
+                <ul className="max-h-48 overflow-auto py-1">
+                  {filtrados.map((p) => (
+                    <li
+                      key={`${p.tipo}-${p.id}`}
+                      className="flex cursor-pointer items-center gap-2 px-2 py-1.5 text-xs hover:bg-accent"
+                      onClick={() => {
+                        onSelect(p)
+                        setBusca("")
+                        setAberto(false)
+                      }}
+                    >
+                      <span className={`inline-flex items-center rounded px-1 text-[10px] font-semibold uppercase leading-none ${p.tipo === "filtro" ? "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300" : "bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"}`}>
+                        {p.tipo === "filtro" ? "Filtro" : "Peça"}
+                      </span>
+                      <span className="flex-1 truncate">
+                        {p.nome} {p.marca ? `(${p.marca})` : ""}
+                      </span>
+                      <span className="text-muted-foreground">R$ {p.preco.toFixed(2)}</span>
+                      <span className="text-muted-foreground">Est: {p.estoque}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {aberto && busca && filtrados.length === 0 && (
+              <div className="absolute z-20 mt-1 w-full rounded-md border bg-popover p-2 text-center text-xs text-muted-foreground shadow-md">
+                Nenhum produto encontrado
+              </div>
+            )}
+          </>
+        )}
+      </div>
+
+      <span className="text-center text-xs text-muted-foreground">un</span>
+      <Input
+        type="number"
+        step="1"
+        min="1"
+        className="h-8 px-1 text-center text-xs"
+        value={item.quantidade}
+        onChange={(e) => onChangeQty(e.target.value)}
+      />
+      <Input
+        type="number"
+        step="0.01"
+        min="0"
+        className="h-8 px-1 text-right text-xs"
+        value={item.valor_unitario}
+        onChange={(e) => onChangePrice(e.target.value)}
+      />
+      <div className="text-right text-xs font-medium">
+        R$ {R(itemTotal)}
+      </div>
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon"
+        className="h-7 w-7"
+        onClick={onRemove}
+      >
+        <Trash2 className="h-3 w-3 text-destructive" />
+      </Button>
+    </div>
+  )
+}
+
 export function TrocaFormPage() {
   const { id } = useParams()
   const [searchParams] = useSearchParams()
@@ -76,11 +220,12 @@ export function TrocaFormPage() {
   const { data: veiculosData } = useAllVeiculos()
   const { data: oleosData } = useAllOleos()
   const { data: pecasData } = useAllPecas()
+  const { data: filtrosData } = useAllFiltros()
   const { data: servicosData } = useAllServicos()
   const createMutation = useCreateTroca()
   const updateMutation = useUpdateTroca()
 
-  const [itensPecas, setItensPecas] = useState<ItemPeca[]>([])
+  const [itensProdutos, setItensProdutos] = useState<ItemProduto[]>([])
   const [servicoId, setServicoId] = useState<string>("")
   const restoredRef = useRef(false)
   const submittedRef = useRef(false)
@@ -94,6 +239,38 @@ export function TrocaFormPage() {
     if (!pecasData?.items) return []
     return pecasData.items.filter((p) => p.ativo)
   }, [pecasData])
+
+  const filtrosAtivos = useMemo(() => {
+    if (!filtrosData?.items) return []
+    return filtrosData.items.filter((f) => f.ativo)
+  }, [filtrosData])
+
+  const produtosBusca: ProdutoBusca[] = useMemo(() => {
+    const lista: ProdutoBusca[] = []
+    for (const p of pecasAtivas) {
+      lista.push({
+        tipo: "peca",
+        id: p.id,
+        nome: p.nome,
+        marca: p.marca,
+        preco: Number(p.preco_venda),
+        estoque: Number(p.estoque),
+        unidade: p.unidade || "un",
+      })
+    }
+    for (const f of filtrosAtivos) {
+      lista.push({
+        tipo: "filtro",
+        id: f.id,
+        nome: f.nome,
+        marca: f.marca,
+        preco: Number(f.preco_unitario),
+        estoque: f.estoque,
+        unidade: "un",
+      })
+    }
+    return lista
+  }, [pecasAtivas, filtrosAtivos])
 
   const servicosAtivos = useMemo(() => {
     if (!servicosData?.items) return []
@@ -185,9 +362,11 @@ export function TrocaFormPage() {
         observacoes: troca.observacoes || "",
       })
       if (troca.itens?.length) {
-        setItensPecas(
+        setItensProdutos(
           troca.itens.map((it) => ({
-            peca_id: String(it.peca_id),
+            tipo: it.filtro_id ? "filtro" as const : "peca" as const,
+            produto_id: String(it.filtro_id || it.peca_id),
+            nome: it.filtro?.nome || it.peca?.nome || "",
             quantidade: String(it.quantidade),
             valor_unitario: String(it.valor_unitario),
           }))
@@ -210,8 +389,8 @@ export function TrocaFormPage() {
       }
       reset(restored)
     }
-    if (draft.itensPecas?.length) {
-      setItensPecas(draft.itensPecas)
+    if (draft.itensProdutos?.length) {
+      setItensProdutos(draft.itensProdutos)
     }
     if (draft.clienteId) {
       carregarPorId(draft.clienteId)
@@ -238,13 +417,13 @@ export function TrocaFormPage() {
     saveDraft({
       form: allFormValues,
       clienteId: cliente?.id ?? null,
-      itensPecas,
+      itensProdutos,
     })
-  }, [allFormValues, cliente, itensPecas, isEditing])
+  }, [allFormValues, cliente, itensProdutos, isEditing])
 
   // Calculations
   const subtotalOleo = Number(valorOleo) || 0
-  const subtotalPecas = itensPecas.reduce((acc, item) => {
+  const subtotalPecas = itensProdutos.reduce((acc, item) => {
     return acc + (Number(item.quantidade) || 0) * (Number(item.valor_unitario) || 0)
   }, 0)
   const subtotalProdutos = subtotalOleo + subtotalPecas
@@ -268,35 +447,50 @@ export function TrocaFormPage() {
   }
 
   function addItem() {
-    setItensPecas((prev) => [...prev, { peca_id: "", quantidade: "1", valor_unitario: "0" }])
+    setItensProdutos((prev) => [...prev, { tipo: "peca", produto_id: "", nome: "", quantidade: "1", valor_unitario: "0" }])
   }
 
   function removeItem(index: number) {
-    setItensPecas((prev) => prev.filter((_, i) => i !== index))
+    setItensProdutos((prev) => prev.filter((_, i) => i !== index))
   }
 
-  function updateItem(index: number, field: keyof ItemPeca, value: string) {
-    setItensPecas((prev) => {
+  function selectProduto(index: number, produto: ProdutoBusca) {
+    setItensProdutos((prev) => {
+      const updated = [...prev]
+      updated[index] = {
+        ...updated[index],
+        tipo: produto.tipo,
+        produto_id: String(produto.id),
+        nome: `${produto.nome}${produto.marca ? ` (${produto.marca})` : ""}`,
+        valor_unitario: produto.preco.toFixed(2),
+      }
+      return updated
+    })
+  }
+
+  function updateItemField(index: number, field: "quantidade" | "valor_unitario", value: string) {
+    setItensProdutos((prev) => {
       const updated = [...prev]
       updated[index] = { ...updated[index], [field]: value }
+      return updated
+    })
+  }
 
-      // Auto-fill price when selecting a peca
-      if (field === "peca_id" && value) {
-        const peca = pecasAtivas.find((p) => p.id === Number(value))
-        if (peca) {
-          updated[index].valor_unitario = peca.preco_venda
-        }
-      }
+  function clearItemProduto(index: number) {
+    setItensProdutos((prev) => {
+      const updated = [...prev]
+      updated[index] = { ...updated[index], tipo: "peca", produto_id: "", nome: "", valor_unitario: "0" }
       return updated
     })
   }
 
   async function onSubmit(formData: FormData) {
     try {
-      const itens: ItemTrocaCreate[] = itensPecas
-        .filter((it) => it.peca_id)
+      const itens: ItemTrocaCreate[] = itensProdutos
+        .filter((it) => it.produto_id)
         .map((it) => ({
-          peca_id: Number(it.peca_id),
+          peca_id: it.tipo === "peca" ? Number(it.produto_id) : null,
+          filtro_id: it.tipo === "filtro" ? Number(it.produto_id) : null,
           quantidade: Number(it.quantidade),
           valor_unitario: Number(it.valor_unitario),
         }))
@@ -545,60 +739,23 @@ export function TrocaFormPage() {
             </div>
             {errors.oleo_id && <p className="px-2 py-1 text-xs text-destructive">{errors.oleo_id.message}</p>}
 
-            {/* Additional peca rows */}
-            {itensPecas.map((item, index) => {
+            {/* Additional item rows (peças + filtros) */}
+            {itensProdutos.map((item, index) => {
               const itemTotal = (Number(item.quantidade) || 0) * (Number(item.valor_unitario) || 0)
-              const pecaSelecionada = item.peca_id ? pecasAtivas.find((p) => p.id === Number(item.peca_id)) : null
               return (
-                <div
+                <ItemRowAutocomplete
                   key={index}
-                  className="grid grid-cols-[40px_1fr_60px_70px_90px_90px_40px] items-center gap-1 border-b border-zinc-200 px-2 py-1.5 dark:border-zinc-700"
-                >
-                  <span className="text-center text-xs text-muted-foreground">{index + 2}</span>
-                  <select
-                    className="h-8 w-full rounded border border-input bg-background px-1 text-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                    value={item.peca_id}
-                    onChange={(e) => updateItem(index, "peca_id", e.target.value)}
-                  >
-                    <option value="">Selecione a peça...</option>
-                    {pecasAtivas.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.nome} {p.marca ? `(${p.marca})` : ""} — R$ {Number(p.preco_venda).toFixed(2)} — Est: {Number(p.estoque).toFixed(0)}
-                      </option>
-                    ))}
-                  </select>
-                  <span className="text-center text-xs text-muted-foreground">
-                    {pecaSelecionada?.unidade || "un"}
-                  </span>
-                  <Input
-                    type="number"
-                    step="1"
-                    min="1"
-                    className="h-8 px-1 text-center text-xs"
-                    value={item.quantidade}
-                    onChange={(e) => updateItem(index, "quantidade", e.target.value)}
-                  />
-                  <Input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    className="h-8 px-1 text-right text-xs"
-                    value={item.valor_unitario}
-                    onChange={(e) => updateItem(index, "valor_unitario", e.target.value)}
-                  />
-                  <div className="text-right text-xs font-medium">
-                    R$ {R(itemTotal)}
-                  </div>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7"
-                    onClick={() => removeItem(index)}
-                  >
-                    <Trash2 className="h-3 w-3 text-destructive" />
-                  </Button>
-                </div>
+                  index={index}
+                  item={item}
+                  itemTotal={itemTotal}
+                  produtos={produtosBusca}
+                  onSelect={(p) => selectProduto(index, p)}
+                  onClear={() => clearItemProduto(index)}
+                  onChangeQty={(v) => updateItemField(index, "quantidade", v)}
+                  onChangePrice={(v) => updateItemField(index, "valor_unitario", v)}
+                  onRemove={() => removeItem(index)}
+                  R={R}
+                />
               )
             })}
 

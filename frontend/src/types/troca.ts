@@ -3,7 +3,8 @@ import type { Oleo } from "./oleo"
 
 export interface ItemTroca {
   id: number
-  peca_id: number
+  peca_id: number | null
+  filtro_id: number | null
   quantidade: string
   valor_unitario: string
   valor_total: string
@@ -14,12 +15,20 @@ export interface ItemTroca {
     unidade: string
     preco_venda: string
     estoque: string
-  }
+  } | null
+  filtro?: {
+    id: number
+    nome: string
+    marca: string
+    preco_unitario: string
+    estoque: number
+  } | null
   created_at: string
 }
 
 export interface ItemTrocaCreate {
-  peca_id: number
+  peca_id: number | null
+  filtro_id: number | null
   quantidade: number
   valor_unitario: number
 }

@@ -17,6 +17,16 @@ export function useFiltros(page: number = 1, search?: string) {
   })
 }
 
+export function useAllFiltros() {
+  return useQuery<FiltroListResponse>({
+    queryKey: [KEY, "all"],
+    queryFn: async () => {
+      const { data } = await api.get<FiltroListResponse>("/filtros", { params: { limit: 100 } })
+      return data
+    },
+  })
+}
+
 export function useFiltro(id: number | undefined) {
   return useQuery<Filtro>({
     queryKey: [KEY, id],
