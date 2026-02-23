@@ -50,11 +50,11 @@ export function EntradasPage() {
           <h1 className="text-3xl font-bold tracking-tight">Entradas de Estoque</h1>
           <p className="text-muted-foreground">Histórico de compras de produtos</p>
         </div>
-        <Button asChild>
-          <Link to="/entradas/nova" className="inline-flex items-center">
+        <Link to="/entradas/nova">
+          <Button>
             <Plus className="mr-2 h-4 w-4" /> Nova Entrada
-          </Link>
-        </Button>
+          </Button>
+        </Link>
       </div>
 
       <Card>

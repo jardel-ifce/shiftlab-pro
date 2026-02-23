@@ -72,7 +72,7 @@ export function PecaFormPage() {
     }
 
     try {
-      const payload: Record<string, unknown> = {
+      const base = {
         nome: formData.nome,
         marca: formData.marca || null,
         unidade: formData.unidade || "un.",
@@ -83,14 +83,11 @@ export function PecaFormPage() {
       }
 
       if (isEditing) {
-        payload.estoque = parseDecimal(estoque) || 0
-      }
-
-      if (isEditing) {
+        const payload = { ...base, estoque: parseDecimal(estoque) || 0 }
         await updateMutation.mutateAsync({ id: Number(id), payload })
         toast.success("Peça atualizada com sucesso!")
       } else {
-        await createMutation.mutateAsync(payload)
+        await createMutation.mutateAsync(base)
         toast.success("Peça cadastrada com sucesso!")
       }
       navigate("/pecas")
