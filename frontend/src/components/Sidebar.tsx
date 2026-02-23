@@ -1,10 +1,10 @@
 import { NavLink, useLocation } from "react-router-dom"
-import { LayoutDashboard, Users, Droplets, Car, Wrench, Package, Hammer, PackagePlus, Filter, DollarSign, Receipt, X } from "lucide-react"
+import { LayoutDashboard, Users, Droplets, Car, Wrench, Package, Hammer, PackagePlus, Filter, DollarSign, Receipt, ChevronDown, Boxes, X } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 
 type NavItem = { to: string; icon: React.ComponentType<{ className?: string }>; label: string }
-type NavGroup = { group: string; items: NavItem[] }
+type NavGroup = { group: string; icon: React.ComponentType<{ className?: string }>; items: NavItem[] }
 type NavEntry = NavItem | NavGroup
 
 function isGroup(entry: NavEntry): entry is NavGroup {
@@ -17,6 +17,7 @@ const navEntries: NavEntry[] = [
   { to: "/veiculos", icon: Car, label: "Veículos" },
   {
     group: "Componentes",
+    icon: Boxes,
     items: [
       { to: "/oleos", icon: Droplets, label: "Óleos" },
       { to: "/filtros", icon: Filter, label: "Filtros" },
@@ -30,7 +31,7 @@ const navEntries: NavEntry[] = [
   { to: "/financeiro", icon: DollarSign, label: "Financeiro" },
 ]
 
-function NavItemLink({ item, onNavigate }: { item: NavItem; onNavigate?: () => void }) {
+function NavItemLink({ item, onNavigate, indent }: { item: NavItem; onNavigate?: () => void; indent?: boolean }) {
   return (
     <NavLink
       to={item.to}
@@ -39,6 +40,7 @@ function NavItemLink({ item, onNavigate }: { item: NavItem; onNavigate?: () => v
       className={({ isActive }) =>
         cn(
           "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+          indent && "pl-9",
           isActive
             ? "bg-primary text-primary-foreground"
             : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
@@ -51,21 +53,49 @@ function NavItemLink({ item, onNavigate }: { item: NavItem; onNavigate?: () => v
   )
 }
 
+function NavGroupCollapsible({ entry, onNavigate }: { entry: NavGroup; onNavigate?: () => void }) {
+  const location = useLocation()
+  const isChildActive = entry.items.some((item) => location.pathname.startsWith(item.to))
+  const [open, setOpen] = useState(isChildActive)
+
+  // Auto-expand when a child route is active
+  useEffect(() => {
+    if (isChildActive) setOpen(true)
+  }, [isChildActive])
+
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={() => setOpen((prev) => !prev)}
+        className={cn(
+          "flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+          isChildActive
+            ? "text-foreground"
+            : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+        )}
+      >
+        <entry.icon className="h-4 w-4" />
+        <span className="flex-1 text-left">{entry.group}</span>
+        <ChevronDown className={cn("h-4 w-4 transition-transform", open && "rotate-180")} />
+      </button>
+      {open && (
+        <div className="mt-0.5 space-y-0.5">
+          {entry.items.map((item) => (
+            <NavItemLink key={item.to} item={item} onNavigate={onNavigate} indent />
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 function NavContent({ onNavigate }: { onNavigate?: () => void }) {
   return (
     <nav className="space-y-1 p-4">
-      {navEntries.map((entry, i) => {
+      {navEntries.map((entry) => {
         if (isGroup(entry)) {
-          return (
-            <div key={entry.group}>
-              <p className="mb-1 mt-4 px-3 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">
-                {entry.group}
-              </p>
-              {entry.items.map((item) => (
-                <NavItemLink key={item.to} item={item} onNavigate={onNavigate} />
-              ))}
-            </div>
-          )
+          return <NavGroupCollapsible key={entry.group} entry={entry} onNavigate={onNavigate} />
         }
         return <NavItemLink key={entry.to} item={entry} onNavigate={onNavigate} />
       })}
