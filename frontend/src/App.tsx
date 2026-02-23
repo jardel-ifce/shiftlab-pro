@@ -20,6 +20,8 @@ import { EntradaFormPage } from "@/pages/entradas/EntradaFormPage"
 import { FiltrosPage } from "@/pages/filtros/FiltrosPage"
 import { FiltroFormPage } from "@/pages/filtros/FiltroFormPage"
 import { FinanceiroPage } from "@/pages/financeiro/FinanceiroPage"
+import { DespesasPage } from "@/pages/despesas/DespesasPage"
+import { DespesaFormPage } from "@/pages/despesas/DespesaFormPage"
 
 export default function App() {
   return (
@@ -63,6 +65,10 @@ export default function App() {
             <Route path="/entradas/nova" element={<EntradaFormPage />} />
 
             <Route path="/financeiro" element={<FinanceiroPage />} />
+
+            <Route path="/despesas" element={<DespesasPage />} />
+            <Route path="/despesas/nova" element={<DespesaFormPage />} />
+            <Route path="/despesas/:id/editar" element={<DespesaFormPage />} />
           </Route>
         </Route>
 

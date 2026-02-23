@@ -34,6 +34,10 @@ export interface FinanceiroResumo {
   lucro_bruto_total: number
   margem_media: number
   ticket_medio: number
+  imposto_percentual: number
+  imposto_valor: number
+  despesas_total: number
+  lucro_liquido: number
 }
 
 export interface FinanceiroListResponse {

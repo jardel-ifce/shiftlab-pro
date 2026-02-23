@@ -23,6 +23,8 @@ from fastapi.staticfiles import StaticFiles
 
 from src.api.v1.catalogo import router as catalogo_router
 from src.api.v1.clientes import router as clientes_router
+from src.api.v1.configuracoes import router as configuracoes_router
+from src.api.v1.despesas import router as despesas_router
 from src.api.v1.entradas_estoque import router as entradas_estoque_router
 from src.api.v1.financeiro import router as financeiro_router
 from src.api.v1.filtros import router as filtros_router
@@ -317,6 +319,18 @@ app.include_router(
 # Financeiro Router - /api/v1/financeiro/*
 app.include_router(
     financeiro_router,
+    prefix=settings.API_PREFIX,
+)
+
+# Configurações Router - /api/v1/configuracoes/*
+app.include_router(
+    configuracoes_router,
+    prefix=settings.API_PREFIX,
+)
+
+# Despesas Router - /api/v1/despesas/*
+app.include_router(
+    despesas_router,
     prefix=settings.API_PREFIX,
 )
 

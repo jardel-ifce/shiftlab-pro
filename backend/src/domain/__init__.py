@@ -15,6 +15,8 @@ Uso:
 
 from src.domain.base import BaseModel
 from src.domain.cliente import Cliente
+from src.domain.configuracao import Configuracao
+from src.domain.despesa import Despesa
 from src.domain.item_troca import ItemTroca
 from src.domain.modelo_referencia import ModeloReferencia
 from src.domain.montadora import Montadora
@@ -27,6 +29,8 @@ from src.domain.veiculo import TipoCambio, Veiculo
 __all__ = [
     "BaseModel",
     "Cliente",
+    "Configuracao",
+    "Despesa",
     "Veiculo",
     "TipoCambio",
     "Oleo",

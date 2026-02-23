@@ -15,6 +15,8 @@ from src.schemas.troca_oleo import (
     FinanceiroListResponse,
     ProdutoFinanceiroListResponse,
 )
+from src.services.configuracao_service import ConfiguracaoService
+from src.services.despesa_service import DespesaService
 from src.services.troca_service import TrocaOleoService
 
 router = APIRouter(prefix="/financeiro", tags=["Financeiro"])
@@ -38,13 +40,24 @@ async def listar_financeiro(
     data_fim: date | None = Query(None, description="Data fim"),
     user: CurrentActiveUser = None,
     service: TrocaOleoService = Depends(get_service),
+    db: AsyncSession = Depends(get_db),
 ) -> FinanceiroListResponse:
+    config_service = ConfiguracaoService(db)
+    imposto_percentual = await config_service.get_imposto_percentual()
+
+    despesa_service = DespesaService(db)
+    despesas_total = await despesa_service.get_total_periodo(
+        data_inicio=data_inicio, data_fim=data_fim
+    )
+
     return await service.get_financeiro(
         skip=skip,
         limit=limit,
         cliente_id=cliente_id,
         data_inicio=data_inicio,
         data_fim=data_fim,
+        imposto_percentual=imposto_percentual,
+        despesas_total=despesas_total,
     )
 
 

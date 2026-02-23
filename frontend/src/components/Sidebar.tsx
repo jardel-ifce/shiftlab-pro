@@ -1,5 +1,5 @@
 import { NavLink, useLocation } from "react-router-dom"
-import { LayoutDashboard, Users, Droplets, Car, Wrench, Package, Hammer, PackagePlus, Filter, DollarSign, X } from "lucide-react"
+import { LayoutDashboard, Users, Droplets, Car, Wrench, Package, Hammer, PackagePlus, Filter, DollarSign, Receipt, X } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useEffect } from "react"
 
@@ -13,6 +13,7 @@ const navItems = [
   { to: "/servicos", icon: Hammer, label: "Serviços" },
   { to: "/entradas", icon: PackagePlus, label: "Entradas" },
   { to: "/trocas", icon: Wrench, label: "Trocas" },
+  { to: "/despesas", icon: Receipt, label: "Despesas" },
   { to: "/financeiro", icon: DollarSign, label: "Financeiro" },
 ]
 

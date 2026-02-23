@@ -144,6 +144,10 @@ class FinanceiroResumoResponse(BaseModel):
     lucro_bruto_total: float
     margem_media: float
     ticket_medio: float
+    imposto_percentual: float
+    imposto_valor: float
+    despesas_total: float
+    lucro_liquido: float
 
 
 class FinanceiroListResponse(BaseModel):

@@ -458,6 +458,8 @@ class TrocaOleoService:
         cliente_id: int | None = None,
         data_inicio: date | None = None,
         data_fim: date | None = None,
+        imposto_percentual: float = 0.0,
+        despesas_total: float = 0.0,
     ) -> FinanceiroListResponse:
         """Retorna dados financeiros com lucro por troca."""
         # Base query com filtros
@@ -511,6 +513,9 @@ class TrocaOleoService:
         )
         ticket_medio = faturamento_total / total_trocas if total_trocas > 0 else 0
 
+        imposto_valor = faturamento_total * (imposto_percentual / 100)
+        lucro_liquido = lucro_bruto_total - imposto_valor - despesas_total
+
         resumo = FinanceiroResumoResponse(
             total_trocas=total_trocas,
             faturamento_total=faturamento_total,
@@ -518,6 +523,10 @@ class TrocaOleoService:
             lucro_bruto_total=lucro_bruto_total,
             margem_media=round(margem_media, 1),
             ticket_medio=round(ticket_medio, 2),
+            imposto_percentual=imposto_percentual,
+            imposto_valor=round(imposto_valor, 2),
+            despesas_total=round(despesas_total, 2),
+            lucro_liquido=round(lucro_liquido, 2),
         )
 
         # Query paginada com relacionamentos

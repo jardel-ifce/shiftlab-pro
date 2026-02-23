@@ -1,6 +1,7 @@
 import { useState } from "react"
-import { DollarSign, TrendingUp, TrendingDown, BarChart3, Search, X } from "lucide-react"
+import { DollarSign, TrendingUp, TrendingDown, Search, X, Receipt, Percent, BadgeDollarSign, Save } from "lucide-react"
 import { useFinanceiro, useFinanceiroProdutos } from "@/hooks/useFinanceiro"
+import { useImposto, useUpdateImposto } from "@/hooks/useConfiguracoes"
 import { useBuscaCliente } from "@/hooks/useClientes"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -80,6 +81,19 @@ export function FinanceiroPage() {
 
 function TabTrocas() {
   const [page, setPage] = useState(1)
+
+  // Imposto
+  const { data: impostoData } = useImposto()
+  const updateImposto = useUpdateImposto()
+  const [impostoInput, setImpostoInput] = useState<string | null>(null)
+  const impostoAtual = impostoInput ?? String(impostoData?.percentual ?? "")
+
+  function salvarImposto() {
+    const val = parseFloat(impostoAtual)
+    if (!isNaN(val) && val >= 0 && val <= 100) {
+      updateImposto.mutate(val, { onSuccess: () => setImpostoInput(null) })
+    }
+  }
 
   // Filtro de cliente
   const [searchInput, setSearchInput] = useState("")
@@ -176,73 +190,135 @@ function TabTrocas() {
             {temFiltro && (
               <Button variant="ghost" size="sm" onClick={limparFiltros}>Limpar</Button>
             )}
+
+            <div className="ml-auto flex items-end gap-2">
+              <div>
+                <label className="mb-1 block text-xs font-medium text-muted-foreground">Imposto %</label>
+                <div className="flex gap-1">
+                  <Input
+                    type="number"
+                    min={0}
+                    max={100}
+                    step={0.1}
+                    className="h-10 w-[80px] text-sm"
+                    value={impostoAtual}
+                    onChange={(e) => setImpostoInput(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && salvarImposto()}
+                  />
+                  <Button
+                    size="icon"
+                    variant="outline"
+                    className="h-10 w-10"
+                    onClick={salvarImposto}
+                    disabled={updateImposto.isPending}
+                  >
+                    <Save className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Cards de resumo */}
+      {/* Cards de resumo - Linha 1 */}
       {data?.resumo && (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Faturamento</CardTitle>
-              <DollarSign className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-emerald-600">
-                {formatBRL(data.resumo.faturamento_total)}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                {data.resumo.total_trocas} trocas | Ticket médio {formatBRL(data.resumo.ticket_medio)}
-              </p>
-            </CardContent>
-          </Card>
+        <>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Faturamento</CardTitle>
+                <DollarSign className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-emerald-600">
+                  {formatBRL(data.resumo.faturamento_total)}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {data.resumo.total_trocas} trocas | Ticket médio {formatBRL(data.resumo.ticket_medio)}
+                </p>
+              </CardContent>
+            </Card>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Custo Total</CardTitle>
-              <TrendingDown className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-red-600">
-                {formatBRL(data.resumo.custo_total)}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Custo de óleo + peças
-              </p>
-            </CardContent>
-          </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Custo Total</CardTitle>
+                <TrendingDown className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-red-600">
+                  {formatBRL(data.resumo.custo_total)}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Custo de óleo + peças
+                </p>
+              </CardContent>
+            </Card>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Lucro Bruto</CardTitle>
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className={`text-2xl font-bold ${data.resumo.lucro_bruto_total >= 0 ? "text-emerald-600" : "text-red-600"}`}>
-                {formatBRL(data.resumo.lucro_bruto_total)}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Faturamento - Custos
-              </p>
-            </CardContent>
-          </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Lucro Bruto</CardTitle>
+                <TrendingUp className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className={`text-2xl font-bold ${data.resumo.lucro_bruto_total >= 0 ? "text-emerald-600" : "text-red-600"}`}>
+                  {formatBRL(data.resumo.lucro_bruto_total)}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Faturamento - Custos
+                </p>
+              </CardContent>
+            </Card>
+          </div>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Margem Média</CardTitle>
-              <BarChart3 className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className={`text-2xl font-bold ${margemColor(data.resumo.margem_media)}`}>
-                {data.resumo.margem_media.toFixed(1)}%
-              </div>
-              <p className="text-xs text-muted-foreground">
-                (Lucro / Faturamento) &times; 100
-              </p>
-            </CardContent>
-          </Card>
-        </div>
+          {/* Cards de resumo - Linha 2 */}
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Impostos ({data.resumo.imposto_percentual}%)</CardTitle>
+                <Percent className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-orange-600">
+                  -{formatBRL(data.resumo.imposto_valor)}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Sobre faturamento bruto
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Despesas</CardTitle>
+                <Receipt className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-orange-600">
+                  -{formatBRL(data.resumo.despesas_total)}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Despesas operacionais no período
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card className="border-2 border-primary/20 bg-primary/5">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Lucro Líquido</CardTitle>
+                <BadgeDollarSign className="h-4 w-4 text-primary" />
+              </CardHeader>
+              <CardContent>
+                <div className={`text-2xl font-bold ${data.resumo.lucro_liquido >= 0 ? "text-emerald-600" : "text-red-600"}`}>
+                  {formatBRL(data.resumo.lucro_liquido)}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Bruto - Impostos - Despesas
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+        </>
       )}
 
       {/* Tabela */}
