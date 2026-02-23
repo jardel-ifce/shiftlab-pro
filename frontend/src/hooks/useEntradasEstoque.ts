@@ -69,6 +69,6 @@ export function useBuscarProduto(query: string, tipo?: string) {
       )
       return data
     },
-    enabled: query.length >= 2,
+    enabled: query.length >= 1,
   })
 }

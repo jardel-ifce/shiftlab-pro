@@ -192,13 +192,13 @@ export function EntradaFormPage() {
                       setBuscaInput(e.target.value)
                       setShowDropdown(true)
                     }}
-                    onFocus={() => buscaInput.length >= 2 && setShowDropdown(true)}
+                    onFocus={() => buscaInput.length >= 1 && setShowDropdown(true)}
                     className="pl-9"
                     autoComplete="off"
                   />
                 </div>
 
-                {showDropdown && buscaDebounced.length >= 2 && (
+                {showDropdown && buscaDebounced.length >= 1 && (
                   <div className="absolute z-50 mt-1 w-full rounded-md border bg-popover shadow-lg">
                     {buscando ? (
                       <div className="p-3 text-center text-sm text-muted-foreground">Buscando...</div>
