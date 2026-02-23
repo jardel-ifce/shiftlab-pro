@@ -62,6 +62,18 @@ class ItemTroca(BaseModel):
         comment="Total do item (qtd × valor_unitário)"
     )
 
+    custo_unitario: Mapped[Decimal] = mapped_column(
+        Numeric(10, 2),
+        nullable=False,
+        default=0,
+        comment="Custo de aquisição da peça no momento da troca"
+    )
+
+    @property
+    def lucro_item(self) -> Decimal:
+        """Lucro bruto do item."""
+        return self.valor_total - (self.custo_unitario * self.quantidade)
+
     # Relacionamentos
     troca: Mapped["TrocaOleo"] = relationship(
         "TrocaOleo",

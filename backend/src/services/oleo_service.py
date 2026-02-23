@@ -47,7 +47,8 @@ class OleoService:
             query = query.where(
                 (Oleo.nome.ilike(search_term)) |
                 (Oleo.marca.ilike(search_term)) |
-                (Oleo.tipo_oleo_transmissao.ilike(search_term))
+                (Oleo.tipo_oleo_transmissao.ilike(search_term)) |
+                (Oleo.codigo_produto.ilike(search_term))
             )
 
         # Total
@@ -72,17 +73,11 @@ class OleoService:
     async def create(self, data: OleoCreate) -> Oleo:
         """Cria um novo óleo."""
         oleo = Oleo(
+            codigo_produto=data.codigo_produto,
             nome=data.nome,
             marca=data.marca,
-            modelo=data.modelo,
-            tipo_veiculo=data.tipo_veiculo,
-            viscosidade=data.viscosidade,
-            volume_unidade=data.volume_unidade,
             volume_liquido=data.volume_liquido,
-            formato_venda=data.formato_venda,
-            tipo_recipiente=data.tipo_recipiente,
             tipo_oleo_transmissao=data.tipo_oleo_transmissao,
-            desempenho=data.desempenho,
             codigo_oem=data.codigo_oem,
             custo_litro=data.custo_litro,
             preco_litro=data.preco_litro,

@@ -2,10 +2,9 @@ import { useState } from "react"
 import { Link } from "react-router-dom"
 import { Plus, Search, Pencil, Trash2, ChevronLeft, ChevronRight, AlertTriangle } from "lucide-react"
 import { toast } from "sonner"
-import { useOleos, useDeleteOleo } from "@/hooks/useOleos"
+import { useFiltros, useDeleteFiltro } from "@/hooks/useFiltros"
 import { Button, buttonVariants } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Badge } from "@/components/ui/badge"
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table"
@@ -14,20 +13,20 @@ import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog"
 import { HoverCard, HoverCardTrigger, HoverCardContent } from "@/components/ui/hover-card"
-import type { Oleo } from "@/types/oleo"
+import type { Filtro } from "@/types/filtro"
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8001"
 const BASE_URL = API_URL.replace(/\/api\/v1\/?$/, "")
 
-export function OleosPage() {
+export function FiltrosPage() {
   const [page, setPage] = useState(1)
   const [search, setSearch] = useState("")
   const [searchInput, setSearchInput] = useState("")
-  const [deleteTarget, setDeleteTarget] = useState<Oleo | null>(null)
-  const [fotoPreview, setFotoPreview] = useState<Oleo | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<Filtro | null>(null)
+  const [fotoPreview, setFotoPreview] = useState<Filtro | null>(null)
 
-  const { data, isLoading } = useOleos(page, search || undefined)
-  const deleteMutation = useDeleteOleo()
+  const { data, isLoading } = useFiltros(page, search || undefined)
+  const deleteMutation = useDeleteFiltro()
 
   function handleSearch(e: React.FormEvent) {
     e.preventDefault()
@@ -39,14 +38,14 @@ export function OleosPage() {
     if (!deleteTarget) return
     try {
       await deleteMutation.mutateAsync(deleteTarget.id)
-      toast.success("Óleo desativado com sucesso!")
+      toast.success("Filtro desativado com sucesso!")
       setDeleteTarget(null)
     } catch {
-      toast.error("Erro ao desativar óleo.")
+      toast.error("Erro ao desativar filtro.")
     }
   }
 
-  function formatCurrency(value: string) {
+  function formatCurrency(value: string | number) {
     return Number(value).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
   }
 
@@ -54,14 +53,14 @@ export function OleosPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Óleos</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Filtros de Óleo</h1>
           <p className="text-muted-foreground">
-            Gerencie os óleos (produtos) em estoque.
+            Gerencie os filtros de óleo em estoque.
           </p>
         </div>
-        <Link to="/oleos/novo" className={buttonVariants()}>
+        <Link to="/filtros/novo" className={buttonVariants()}>
           <Plus className="mr-2 h-4 w-4" />
-          Novo Óleo
+          Novo Filtro
         </Link>
       </div>
 
@@ -69,7 +68,7 @@ export function OleosPage() {
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Buscar por nome, marca ou tipo..."
+            placeholder="Buscar por nome, marca, código ou OEM..."
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
             className="pl-9"
@@ -90,11 +89,11 @@ export function OleosPage() {
               <TableHead>Código</TableHead>
               <TableHead>Nome</TableHead>
               <TableHead>Marca</TableHead>
-              <TableHead>Tipo Óleo</TableHead>
-              <TableHead className="text-right">Custo/L</TableHead>
-              <TableHead className="text-right">Preço/L</TableHead>
-              <TableHead className="text-right">Lucro/L</TableHead>
-              <TableHead>Estoque (L)</TableHead>
+              <TableHead>OEM</TableHead>
+              <TableHead className="text-right">Custo</TableHead>
+              <TableHead className="text-right">Preço</TableHead>
+              <TableHead className="text-right">Lucro</TableHead>
+              <TableHead>Estoque</TableHead>
               <TableHead>Margem</TableHead>
               <TableHead className="w-[100px]">Ações</TableHead>
             </TableRow>
@@ -111,72 +110,66 @@ export function OleosPage() {
             ) : data?.items.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={10} className="h-24 text-center text-muted-foreground">
-                  {search ? "Nenhum óleo encontrado." : "Nenhum óleo cadastrado."}
+                  {search ? "Nenhum filtro encontrado." : "Nenhum filtro cadastrado."}
                 </TableCell>
               </TableRow>
             ) : (
-              data?.items.map((oleo) => (
-                <TableRow key={oleo.id}>
+              data?.items.map((filtro) => (
+                <TableRow key={filtro.id}>
                   <TableCell className="text-muted-foreground text-sm">
-                    {oleo.codigo_produto || "-"}
+                    {filtro.codigo_produto || "-"}
                   </TableCell>
                   <TableCell className="font-medium">
-                    {oleo.foto_url ? (
-                      <span className="relative inline-block">
-                        <HoverCard>
-                          <HoverCardTrigger>
-                            <span
-                              className="cursor-pointer underline-offset-4 hover:underline"
-                              onClick={() => setFotoPreview(oleo)}
-                            >
-                              {oleo.nome}
-                            </span>
-                          </HoverCardTrigger>
-                          <HoverCardContent side="right" className="w-52 p-2">
-                            <img
-                              src={`${BASE_URL}${oleo.foto_url}`}
-                              alt={oleo.nome}
-                              className="h-40 w-full rounded-md object-contain"
-                            />
-                            <p className="mt-2 text-center text-xs font-medium">
-                              {oleo.marca} {oleo.nome}
-                            </p>
-                          </HoverCardContent>
-                        </HoverCard>
-                      </span>
+                    {filtro.foto_url ? (
+                      <HoverCard>
+                        <HoverCardTrigger>
+                          <span
+                            className="cursor-pointer underline-offset-4 hover:underline"
+                            onClick={() => setFotoPreview(filtro)}
+                          >
+                            {filtro.nome}
+                          </span>
+                        </HoverCardTrigger>
+                        <HoverCardContent side="right" className="w-52 p-2">
+                          <img
+                            src={`${BASE_URL}${filtro.foto_url}`}
+                            alt={filtro.nome}
+                            className="h-40 w-full rounded-md object-contain"
+                          />
+                          <p className="mt-2 text-center text-xs font-medium">
+                            {filtro.marca} {filtro.nome}
+                          </p>
+                        </HoverCardContent>
+                      </HoverCard>
                     ) : (
-                      oleo.nome
+                      filtro.nome
                     )}
                   </TableCell>
-                  <TableCell>{oleo.marca}</TableCell>
-                  <TableCell>
-                    {oleo.tipo_oleo_transmissao ? (
-                      <Badge variant="secondary">{oleo.tipo_oleo_transmissao}</Badge>
-                    ) : (
-                      <span className="text-muted-foreground">-</span>
-                    )}
+                  <TableCell>{filtro.marca}</TableCell>
+                  <TableCell className="text-sm text-muted-foreground">
+                    {filtro.codigo_oem || "-"}
                   </TableCell>
-                  <TableCell className="text-right text-red-600">{formatCurrency(oleo.custo_litro)}</TableCell>
-                  <TableCell className="text-right">{formatCurrency(oleo.preco_litro)}</TableCell>
-                  <TableCell className="text-right text-emerald-600">{formatCurrency(oleo.lucro_por_litro)}</TableCell>
+                  <TableCell className="text-right text-red-600">{formatCurrency(filtro.custo_unitario)}</TableCell>
+                  <TableCell className="text-right">{formatCurrency(filtro.preco_unitario)}</TableCell>
+                  <TableCell className="text-right text-emerald-600">{formatCurrency(filtro.lucro_unitario)}</TableCell>
                   <TableCell>
                     <div className="flex items-center gap-1">
-                      {Number(oleo.estoque_litros).toFixed(1)}
-                      {oleo.estoque_baixo && (
+                      {filtro.estoque}
+                      {filtro.estoque_baixo && (
                         <span title="Estoque baixo"><AlertTriangle className="h-4 w-4 text-orange-500" /></span>
                       )}
                     </div>
                   </TableCell>
-                  <TableCell>{Number(oleo.margem_lucro).toFixed(1)}%</TableCell>
+                  <TableCell>{Number(filtro.margem_lucro).toFixed(1)}%</TableCell>
                   <TableCell>
                     <div className="flex gap-1">
                       <Link
-                        to={`/oleos/${oleo.id}/editar`}
+                        to={`/filtros/${filtro.id}/editar`}
                         className={buttonVariants({ variant: "ghost", size: "icon" })}
                       >
                         <Pencil className="h-4 w-4" />
                       </Link>
-                      <Button variant="ghost" size="icon" onClick={() => setDeleteTarget(oleo)}>
+                      <Button variant="ghost" size="icon" onClick={() => setDeleteTarget(filtro)}>
                         <Trash2 className="h-4 w-4 text-destructive" />
                       </Button>
                     </div>
@@ -190,7 +183,7 @@ export function OleosPage() {
 
       {data && data.pages > 1 && (
         <div className="flex items-center justify-between">
-          <p className="text-sm text-muted-foreground">{data.total} óleo{data.total !== 1 ? "s" : ""}</p>
+          <p className="text-sm text-muted-foreground">{data.total} filtro{data.total !== 1 ? "s" : ""}</p>
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
               <ChevronLeft className="mr-1 h-4 w-4" /> Anterior
@@ -206,7 +199,7 @@ export function OleosPage() {
       <Dialog open={!!deleteTarget} onOpenChange={() => setDeleteTarget(null)}>
         <DialogContent onClose={() => setDeleteTarget(null)}>
           <DialogHeader>
-            <DialogTitle>Desativar óleo</DialogTitle>
+            <DialogTitle>Desativar filtro</DialogTitle>
             <DialogDescription>
               Tem certeza que deseja desativar <strong>{deleteTarget?.nome}</strong>?
               O produto não será excluído, apenas ficará inativo.
@@ -221,7 +214,6 @@ export function OleosPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Dialog de preview da foto (mobile) */}
       <Dialog open={!!fotoPreview} onOpenChange={() => setFotoPreview(null)}>
         <DialogContent onClose={() => setFotoPreview(null)} className="max-w-sm">
           {fotoPreview?.foto_url && (

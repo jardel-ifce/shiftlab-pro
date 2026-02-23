@@ -23,6 +23,9 @@ from fastapi.staticfiles import StaticFiles
 
 from src.api.v1.catalogo import router as catalogo_router
 from src.api.v1.clientes import router as clientes_router
+from src.api.v1.entradas_estoque import router as entradas_estoque_router
+from src.api.v1.financeiro import router as financeiro_router
+from src.api.v1.filtros import router as filtros_router
 from src.api.v1.oleos import router as oleos_router
 from src.api.v1.pecas import router as pecas_router
 from src.api.v1.servicos import router as servicos_router
@@ -296,6 +299,24 @@ app.include_router(
 # Catálogo Router - /api/v1/catalogo/*
 app.include_router(
     catalogo_router,
+    prefix=settings.API_PREFIX,
+)
+
+# Entradas de Estoque Router - /api/v1/entradas-estoque/*
+app.include_router(
+    entradas_estoque_router,
+    prefix=settings.API_PREFIX,
+)
+
+# Filtros de Óleo Router - /api/v1/filtros/*
+app.include_router(
+    filtros_router,
+    prefix=settings.API_PREFIX,
+)
+
+# Financeiro Router - /api/v1/financeiro/*
+app.include_router(
+    financeiro_router,
     prefix=settings.API_PREFIX,
 )
 

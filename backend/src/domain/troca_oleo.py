@@ -132,6 +132,14 @@ class TrocaOleo(BaseModel):
         comment="Justificativa do desconto"
     )
 
+    # Taxa (ex: taxa do cartão)
+    taxa_percentual: Mapped[Decimal] = mapped_column(
+        Numeric(5, 2),
+        default=0,
+        nullable=False,
+        comment="Percentual de taxa (ex: taxa cartão)"
+    )
+
     # Próxima troca
     proxima_troca_km: Mapped[int | None] = mapped_column(
         Integer,
@@ -143,6 +151,14 @@ class TrocaOleo(BaseModel):
         Date,
         nullable=True,
         comment="Data prevista para próxima troca"
+    )
+
+    # Custo (snapshot no momento da troca)
+    custo_oleo: Mapped[Decimal] = mapped_column(
+        Numeric(10, 2),
+        default=0,
+        nullable=False,
+        comment="Custo total do óleo (custo_litro × quantidade)"
     )
 
     # Observações
@@ -174,6 +190,31 @@ class TrocaOleo(BaseModel):
         cascade="all, delete-orphan",
         lazy="selectin"
     )
+
+    @property
+    def custo_pecas(self) -> Decimal:
+        """Custo total das peças utilizadas."""
+        return sum(
+            (item.custo_unitario * item.quantidade for item in self.itens),
+            Decimal("0"),
+        )
+
+    @property
+    def custo_total(self) -> Decimal:
+        """Custo total da troca (óleo + peças)."""
+        return self.custo_oleo + self.custo_pecas
+
+    @property
+    def lucro_bruto(self) -> Decimal:
+        """Lucro bruto = valor_total - custo_total."""
+        return self.valor_total - self.custo_total
+
+    @property
+    def margem_lucro(self) -> Decimal:
+        """Margem de lucro percentual."""
+        if self.valor_total and self.valor_total > 0:
+            return (self.lucro_bruto / self.valor_total) * 100
+        return Decimal("0")
 
     @property
     def valor_sugerido_oleo(self) -> Decimal:

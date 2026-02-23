@@ -4,12 +4,12 @@ import { useForm } from "react-hook-form"
 import { toast } from "sonner"
 import { ArrowLeft, ImagePlus, Loader2, Trash2 } from "lucide-react"
 import {
-  useOleo,
-  useCreateOleo,
-  useUpdateOleo,
-  useUploadFotoOleo,
-  useDeleteFotoOleo,
-} from "@/hooks/useOleos"
+  useFiltro,
+  useCreateFiltro,
+  useUpdateFiltro,
+  useUploadFotoFiltro,
+  useDeleteFotoFiltro,
+} from "@/hooks/useFiltros"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -17,11 +17,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
   formatMoeda,
-  formatDecimal,
   parseMoeda,
-  parseDecimal,
   numberToMoeda,
-  numberToDecimal,
 } from "@/lib/masks"
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8001"
@@ -31,51 +28,44 @@ interface FormData {
   codigo_produto: string
   nome: string
   marca: string
-  volume_liquido: string
-  tipo_oleo_transmissao: string
   codigo_oem: string
   observacoes: string
 }
 
-export function OleoFormPage() {
+export function FiltroFormPage() {
   const { id } = useParams()
   const isEditing = !!id
   const navigate = useNavigate()
 
-  const { data: oleo, isLoading } = useOleo(isEditing ? Number(id) : undefined)
-  const createMutation = useCreateOleo()
-  const updateMutation = useUpdateOleo()
-  const uploadFotoMutation = useUploadFotoOleo()
-  const deleteFotoMutation = useDeleteFotoOleo()
+  const { data: filtro, isLoading } = useFiltro(isEditing ? Number(id) : undefined)
+  const createMutation = useCreateFiltro()
+  const updateMutation = useUpdateFiltro()
+  const uploadFotoMutation = useUploadFotoFiltro()
+  const deleteFotoMutation = useDeleteFotoFiltro()
 
   const { register, handleSubmit, reset, formState: { errors } } = useForm<FormData>()
 
-  // Foto state
   const [fotoFile, setFotoFile] = useState<File | null>(null)
   const [fotoPreview, setFotoPreview] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  // Masked fields state
-  const [precoLitro, setPrecoLitro] = useState("")
-  const [estoqueMinimo, setEstoqueMinimo] = useState("")
+  const [precoUnitario, setPrecoUnitario] = useState("")
+  const [estoqueMinimo, setEstoqueMinimo] = useState("2")
 
   useEffect(() => {
-    if (oleo) {
+    if (filtro) {
       reset({
-        codigo_produto: oleo.codigo_produto || "",
-        nome: oleo.nome,
-        marca: oleo.marca,
-        volume_liquido: oleo.volume_liquido || "",
-        tipo_oleo_transmissao: oleo.tipo_oleo_transmissao || "",
-        codigo_oem: oleo.codigo_oem || "",
-        observacoes: oleo.observacoes || "",
+        codigo_produto: filtro.codigo_produto || "",
+        nome: filtro.nome,
+        marca: filtro.marca,
+        codigo_oem: filtro.codigo_oem || "",
+        observacoes: filtro.observacoes || "",
       })
-      setPrecoLitro(numberToMoeda(oleo.preco_litro))
-      setEstoqueMinimo(numberToDecimal(oleo.estoque_minimo))
+      setPrecoUnitario(numberToMoeda(filtro.preco_unitario))
+      setEstoqueMinimo(String(filtro.estoque_minimo))
     }
-  }, [oleo, reset])
+  }, [filtro, reset])
 
-  // Cleanup preview URL on unmount
   useEffect(() => {
     return () => {
       if (fotoPreview) URL.revokeObjectURL(fotoPreview)
@@ -85,17 +75,14 @@ export function OleoFormPage() {
   function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
-
     if (!["image/jpeg", "image/png"].includes(file.type)) {
       toast.error("Formato inválido. Use JPG ou PNG.")
       return
     }
-
     if (file.size > 10 * 1024 * 1024) {
       toast.error("Arquivo muito grande. Máximo: 10MB.")
       return
     }
-
     if (fotoPreview) URL.revokeObjectURL(fotoPreview)
     setFotoFile(file)
     setFotoPreview(URL.createObjectURL(file))
@@ -109,7 +96,7 @@ export function OleoFormPage() {
   }
 
   async function handleDeleteFoto() {
-    if (!isEditing || !oleo?.foto_url) return
+    if (!isEditing || !filtro?.foto_url) return
     try {
       await deleteFotoMutation.mutateAsync(Number(id))
       toast.success("Foto removida!")
@@ -119,9 +106,9 @@ export function OleoFormPage() {
   }
 
   async function onSubmit(formData: FormData) {
-    const precoValue = parseMoeda(precoLitro)
+    const precoValue = parseMoeda(precoUnitario)
     if (!precoValue) {
-      toast.error("Informe o preço de venda por litro.")
+      toast.error("Informe o preço de venda unitário.")
       return
     }
 
@@ -130,39 +117,36 @@ export function OleoFormPage() {
         codigo_produto: formData.codigo_produto || null,
         nome: formData.nome,
         marca: formData.marca,
-        volume_liquido: formData.volume_liquido || null,
-        tipo_oleo_transmissao: formData.tipo_oleo_transmissao || null,
         codigo_oem: formData.codigo_oem || null,
-        preco_litro: precoValue,
-        estoque_minimo: parseDecimal(estoqueMinimo) || 5,
+        preco_unitario: precoValue,
+        estoque_minimo: Number(estoqueMinimo) || 2,
         observacoes: formData.observacoes || null,
       }
 
-      let oleoId: number
+      let filtroId: number
 
       if (isEditing) {
         await updateMutation.mutateAsync({ id: Number(id), payload })
-        oleoId = Number(id)
-        toast.success("Óleo atualizado com sucesso!")
+        filtroId = Number(id)
+        toast.success("Filtro atualizado com sucesso!")
       } else {
         const created = await createMutation.mutateAsync(payload)
-        oleoId = created.id
-        toast.success("Óleo cadastrado com sucesso!")
+        filtroId = created.id
+        toast.success("Filtro cadastrado com sucesso!")
       }
 
-      // Upload foto se selecionada
       if (fotoFile) {
         try {
-          await uploadFotoMutation.mutateAsync({ id: oleoId, file: fotoFile })
+          await uploadFotoMutation.mutateAsync({ id: filtroId, file: fotoFile })
         } catch {
-          toast.error("Óleo salvo, mas erro ao enviar foto.")
+          toast.error("Filtro salvo, mas erro ao enviar foto.")
         }
       }
 
-      navigate("/oleos")
+      navigate("/filtros")
     } catch (err: unknown) {
       const detail = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail
-      toast.error(detail || "Erro ao salvar óleo.")
+      toast.error(detail || "Erro ao salvar filtro.")
     }
   }
 
@@ -171,37 +155,36 @@ export function OleoFormPage() {
       <div className="mx-auto max-w-3xl space-y-6">
         <Skeleton className="h-8 w-48" />
         <Card><CardContent className="space-y-4 pt-6">
-          {Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}
+          {Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}
         </CardContent></Card>
       </div>
     )
   }
 
   const isPending = createMutation.isPending || updateMutation.isPending || uploadFotoMutation.isPending
-  const fotoAtual = oleo?.foto_url ? `${BASE_URL}${oleo.foto_url}` : null
+  const fotoAtual = filtro?.foto_url ? `${BASE_URL}${filtro.foto_url}` : null
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={() => navigate("/oleos")}>
+        <Button variant="ghost" size="icon" onClick={() => navigate("/filtros")}>
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <div>
           <h1 className="text-3xl font-bold tracking-tight">
-            {isEditing ? "Editar Óleo" : "Novo Óleo"}
+            {isEditing ? "Editar Filtro" : "Novo Filtro"}
           </h1>
           <p className="text-muted-foreground">
-            {isEditing ? "Atualize os dados do produto." : "Cadastre um novo óleo no sistema."}
+            {isEditing ? "Atualize os dados do filtro." : "Cadastre um novo filtro de óleo."}
           </p>
         </div>
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-        {/* Card 1: Identificação do Produto */}
         <Card>
           <CardHeader><CardTitle>Identificação do Produto</CardTitle></CardHeader>
           <CardContent className="space-y-4">
-            {/* Seção de Foto */}
+            {/* Foto */}
             <div className="space-y-3">
               <Label>Foto do Produto</Label>
               <div className="flex items-start gap-4">
@@ -262,79 +245,68 @@ export function OleoFormPage() {
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="codigo_produto">Código do Produto</Label>
-                <Input id="codigo_produto" placeholder="5508, 1760..." {...register("codigo_produto")} />
+                <Input id="codigo_produto" placeholder="6209, 6210..." {...register("codigo_produto")} />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="nome">Nome *</Label>
-                <Input id="nome" placeholder="Dexron VI, Multi ATF..." {...register("nome", { required: "Nome é obrigatório", minLength: { value: 2, message: "Mínimo 2 caracteres" } })} />
+                <Label htmlFor="nome">Modelo do Filtro *</Label>
+                <Input id="nome" placeholder="WFC960, WFC995..." {...register("nome", { required: "Nome é obrigatório", minLength: { value: 2, message: "Mínimo 2 caracteres" } })} />
                 {errors.nome && <p className="text-xs text-destructive">{errors.nome.message}</p>}
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="marca">Marca *</Label>
-                <Input id="marca" placeholder="ZF, Mobil, Shell..." {...register("marca", { required: "Marca é obrigatória", minLength: { value: 2, message: "Mínimo 2 caracteres" } })} />
+                <Input id="marca" placeholder="Wega, Mann, Fram..." {...register("marca", { required: "Marca é obrigatória", minLength: { value: 2, message: "Mínimo 2 caracteres" } })} />
                 {errors.marca && <p className="text-xs text-destructive">{errors.marca.message}</p>}
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="tipo_oleo_transmissao">Tipo de Óleo de Transmissão</Label>
-                <Input id="tipo_oleo_transmissao" placeholder="ATF Dexron VI, CVT NS-3..." {...register("tipo_oleo_transmissao")} />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="volume_liquido">Volume Líquido</Label>
-                <Input id="volume_liquido" placeholder="1 L..." {...register("volume_liquido")} />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="codigo_oem">Código OEM</Label>
-                <Input id="codigo_oem" placeholder="GM, Toyota..." {...register("codigo_oem")} />
+                <Label htmlFor="codigo_oem">Código OEM / Referência</Label>
+                <Input id="codigo_oem" placeholder="OC.1604202, QC.160420..." {...register("codigo_oem")} />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Card 2: Preço e Controle */}
         <Card>
           <CardHeader><CardTitle>Preço e Controle</CardTitle></CardHeader>
           <CardContent>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="preco_litro">Preço Venda/Litro (R$) *</Label>
+                <Label htmlFor="preco_unitario">Preço Venda (R$) *</Label>
                 <Input
-                  id="preco_litro"
+                  id="preco_unitario"
                   type="text"
                   inputMode="decimal"
                   placeholder="0,00"
-                  value={precoLitro}
-                  onChange={(e) => setPrecoLitro(formatMoeda(e.target.value))}
+                  value={precoUnitario}
+                  onChange={(e) => setPrecoUnitario(formatMoeda(e.target.value))}
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="estoque_minimo">Estoque Mínimo (L)</Label>
+                <Label htmlFor="estoque_minimo">Estoque Mínimo (un.)</Label>
                 <Input
                   id="estoque_minimo"
-                  type="text"
-                  inputMode="decimal"
-                  placeholder="5,0"
+                  type="number"
+                  inputMode="numeric"
+                  min="0"
+                  placeholder="2"
                   value={estoqueMinimo}
-                  onChange={(e) => setEstoqueMinimo(formatDecimal(e.target.value))}
+                  onChange={(e) => setEstoqueMinimo(e.target.value)}
                 />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Card 4: Observações */}
         <Card>
           <CardHeader><CardTitle>Observações</CardTitle></CardHeader>
           <CardContent>
             <textarea
               id="observacoes"
               className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-              placeholder="Observações sobre o produto..."
+              placeholder="Observações sobre o filtro..."
               {...register("observacoes")}
             />
           </CardContent>
@@ -344,7 +316,7 @@ export function OleoFormPage() {
           <Button type="submit" disabled={isPending}>
             {isPending ? "Salvando..." : isEditing ? "Atualizar" : "Cadastrar"}
           </Button>
-          <Button type="button" variant="outline" onClick={() => navigate("/oleos")}>Cancelar</Button>
+          <Button type="button" variant="outline" onClick={() => navigate("/filtros")}>Cancelar</Button>
         </div>
       </form>
     </div>

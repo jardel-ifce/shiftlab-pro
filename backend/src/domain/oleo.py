@@ -20,15 +20,8 @@ class Oleo(BaseModel):
     Attributes:
         nome: Nome comercial do produto
         marca: Fabricante do óleo
-        modelo: Linha/modelo do produto (ex: ATF, Multi ATF)
-        tipo_veiculo: Tipo de veículo (ex: Carro, Caminhonete)
-        viscosidade: Grau de viscosidade (ex: 75W-90)
-        volume_unidade: Volume por unidade (ex: 1 L)
         volume_liquido: Volume líquido (ex: 1 L)
-        formato_venda: Formato de venda (ex: Unidade, Caixa)
-        tipo_recipiente: Tipo de recipiente (ex: Garrafa plástica)
         tipo_oleo_transmissao: Tipo de óleo de transmissão (ex: ATF Dexron VI)
-        desempenho: Desempenho do óleo (ex: Full Synthetic Multi-Vehicle)
         codigo_oem: Código OEM (ex: GM General Motors)
         custo_litro: Custo de aquisição por litro
         preco_litro: Preço de venda por litro
@@ -45,6 +38,13 @@ class Oleo(BaseModel):
     __tablename__ = "oleos"
 
     # Identificação do produto
+    codigo_produto: Mapped[str | None] = mapped_column(
+        String(30),
+        nullable=True,
+        index=True,
+        comment="Código do produto (fornecedor/interno)"
+    )
+
     nome: Mapped[str] = mapped_column(
         String(100),
         nullable=False,
@@ -58,47 +58,11 @@ class Oleo(BaseModel):
         comment="Fabricante do óleo"
     )
 
-    # Atributos de marketplace
-    modelo: Mapped[str | None] = mapped_column(
-        String(100),
-        nullable=True,
-        comment="Linha/modelo do produto (ex: ATF, Multi ATF)"
-    )
-
-    tipo_veiculo: Mapped[str | None] = mapped_column(
-        String(50),
-        nullable=True,
-        comment="Tipo de veículo (ex: Carro, Caminhonete)"
-    )
-
-    viscosidade: Mapped[str | None] = mapped_column(
-        String(20),
-        nullable=True,
-        comment="Grau de viscosidade (ex: 75W-90)"
-    )
-
-    volume_unidade: Mapped[str | None] = mapped_column(
-        String(20),
-        nullable=True,
-        comment="Volume por unidade (ex: 1 L, 946 mL)"
-    )
-
+    # Atributos técnicos
     volume_liquido: Mapped[str | None] = mapped_column(
         String(20),
         nullable=True,
         comment="Volume líquido (ex: 1 L)"
-    )
-
-    formato_venda: Mapped[str | None] = mapped_column(
-        String(30),
-        nullable=True,
-        comment="Formato de venda (ex: Unidade, Caixa, Galão)"
-    )
-
-    tipo_recipiente: Mapped[str | None] = mapped_column(
-        String(50),
-        nullable=True,
-        comment="Tipo de recipiente (ex: Garrafa plástica, Lata)"
     )
 
     tipo_oleo_transmissao: Mapped[str | None] = mapped_column(
@@ -106,12 +70,6 @@ class Oleo(BaseModel):
         nullable=True,
         index=True,
         comment="Tipo de óleo de transmissão (ex: ATF Dexron VI)"
-    )
-
-    desempenho: Mapped[str | None] = mapped_column(
-        String(100),
-        nullable=True,
-        comment="Desempenho do óleo (ex: Full Synthetic Multi-Vehicle)"
     )
 
     codigo_oem: Mapped[str | None] = mapped_column(
@@ -173,6 +131,13 @@ class Oleo(BaseModel):
     trocas: Mapped[list["TrocaOleo"]] = relationship(
         "TrocaOleo",
         back_populates="oleo",
+        lazy="selectin"
+    )
+
+    entradas_estoque: Mapped[list["EntradaEstoque"]] = relationship(
+        "EntradaEstoque",
+        back_populates="oleo",
+        cascade="all, delete-orphan",
         lazy="selectin"
     )
 

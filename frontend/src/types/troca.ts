@@ -34,6 +34,7 @@ export interface TrocaOleo {
   desconto_percentual: string
   desconto_valor: string
   motivo_desconto: string | null
+  taxa_percentual: string
   proxima_troca_km: number | null
   proxima_troca_data: string | null
   observacoes: string | null
@@ -64,6 +65,7 @@ export interface TrocaOleoCreate {
   desconto_percentual?: number
   desconto_valor?: number
   motivo_desconto?: string | null
+  taxa_percentual?: number
   proxima_troca_km?: number | null
   proxima_troca_data?: string | null
   observacoes?: string | null
@@ -80,6 +82,7 @@ export interface TrocaOleoUpdate {
   desconto_percentual?: number
   desconto_valor?: number
   motivo_desconto?: string | null
+  taxa_percentual?: number
   proxima_troca_km?: number | null
   proxima_troca_data?: string | null
   observacoes?: string | null

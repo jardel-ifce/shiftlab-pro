@@ -26,6 +26,7 @@ interface FormData {
   desconto_percentual: string
   desconto_valor: string
   motivo_desconto: string
+  taxa_percentual: string
   proxima_troca_km: string
   proxima_troca_data: string
   observacoes: string
@@ -99,24 +100,34 @@ export function TrocaFormPage() {
     return servicosData.items.filter((s) => s.ativo)
   }, [servicosData])
 
+  const defaultProximaData = (() => {
+    const d = new Date()
+    d.setFullYear(d.getFullYear() + 4)
+    return d.toISOString().split("T")[0]
+  })()
+
   const { register, handleSubmit, reset, setValue, watch, formState: { errors } } = useForm<FormData>({
     defaultValues: {
       data_troca: new Date().toISOString().split("T")[0],
       desconto_percentual: "0",
       desconto_valor: "0",
+      taxa_percentual: "0",
       valor_oleo: "0",
       valor_servico: "0",
       quantidade_litros: "",
+      proxima_troca_data: defaultProximaData,
     },
   })
 
   const veiculoIdValue = watch("veiculo_id")
   const oleoIdValue = watch("oleo_id")
+  const kmTroca = watch("quilometragem_troca")
   const qtdLitros = watch("quantidade_litros")
   const valorOleo = watch("valor_oleo")
   const valorServico = watch("valor_servico")
   const descontoPerc = watch("desconto_percentual")
   const descontoVal = watch("desconto_valor")
+  const taxaPerc = watch("taxa_percentual")
 
   // Auto-fill oil price when oil is selected
   const oleoSelecionado = useMemo(() => {
@@ -140,6 +151,16 @@ export function TrocaFormPage() {
     }
   }, [servicoId, servicosAtivos, setValue])
 
+  // Auto-fill proxima_troca_km when quilometragem_troca changes (+40.000)
+  useEffect(() => {
+    if (!isEditing && kmTroca) {
+      const km = Number(kmTroca)
+      if (km > 0) {
+        setValue("proxima_troca_km", String(km + 40000))
+      }
+    }
+  }, [kmTroca, setValue, isEditing])
+
   // When editing, load client and items
   useEffect(() => {
     if (troca && veiculosData?.items) {
@@ -158,6 +179,7 @@ export function TrocaFormPage() {
         desconto_percentual: troca.desconto_percentual,
         desconto_valor: troca.desconto_valor,
         motivo_desconto: troca.motivo_desconto || "",
+        taxa_percentual: troca.taxa_percentual || "0",
         proxima_troca_km: troca.proxima_troca_km ? String(troca.proxima_troca_km) : "",
         proxima_troca_data: troca.proxima_troca_data || "",
         observacoes: troca.observacoes || "",
@@ -182,7 +204,11 @@ export function TrocaFormPage() {
     if (!draft) return
 
     if (draft.form) {
-      reset({ ...draft.form } as FormData)
+      const restored = { ...draft.form } as FormData
+      if (!restored.proxima_troca_data) {
+        restored.proxima_troca_data = defaultProximaData
+      }
+      reset(restored)
     }
     if (draft.itensPecas?.length) {
       setItensPecas(draft.itensPecas)
@@ -226,7 +252,9 @@ export function TrocaFormPage() {
   const subtotalGeral = subtotalProdutos + maoDeObra
   const descPerc = subtotalGeral * ((Number(descontoPerc) || 0) / 100)
   const descVal = Number(descontoVal) || 0
-  const valorTotal = Math.max(0, subtotalGeral - descPerc - descVal)
+  const subtotalComDesconto = subtotalGeral - descPerc - descVal
+  const taxaVal = subtotalComDesconto * ((Number(taxaPerc) || 0) / 100)
+  const valorTotal = Math.max(0, subtotalComDesconto - taxaVal)
 
   function handleSearchChange(value: string) {
     setSearchInput(value)
@@ -283,6 +311,7 @@ export function TrocaFormPage() {
         desconto_percentual: Number(formData.desconto_percentual) || 0,
         desconto_valor: Number(formData.desconto_valor) || 0,
         motivo_desconto: formData.motivo_desconto || null,
+        taxa_percentual: Number(formData.taxa_percentual) || 0,
         proxima_troca_km: formData.proxima_troca_km ? Number(formData.proxima_troca_km) : null,
         proxima_troca_data: formData.proxima_troca_data || null,
         observacoes: formData.observacoes || null,
@@ -641,6 +670,24 @@ export function TrocaFormPage() {
                     {...register("motivo_desconto")}
                   />
                 </div>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-muted-foreground">Taxa (%):</span>
+                  <Input
+                    type="number"
+                    step="0.1"
+                    min="0"
+                    max="100"
+                    placeholder="0"
+                    className="h-8 w-28 text-right text-sm"
+                    {...register("taxa_percentual")}
+                  />
+                </div>
+                {taxaVal > 0 && (
+                  <div className="flex justify-between text-xs text-red-500">
+                    <span>Taxa ({Number(taxaPerc).toFixed(1)}%):</span>
+                    <span>- R$ {R(taxaVal)}</span>
+                  </div>
+                )}
                 <div className="border-t border-zinc-300 pt-2 dark:border-zinc-600">
                   <div className="flex justify-between text-base font-bold">
                     <span>VALOR TOTAL:</span>
@@ -704,7 +751,7 @@ export function TrocaFormPage() {
                 "Registrar Troca"
               )}
             </Button>
-            <Button type="button" variant="outline" onClick={() => { clearDraft(); navigate("/trocas") }}>
+            <Button type="button" variant="destructive" onClick={() => { clearDraft(); navigate("/trocas") }}>
               Cancelar
             </Button>
           </div>

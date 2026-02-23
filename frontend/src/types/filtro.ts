@@ -1,58 +1,51 @@
-export interface Oleo {
+export interface Filtro {
   id: number
   codigo_produto: string | null
   nome: string
   marca: string
-  volume_liquido: string | null
-  tipo_oleo_transmissao: string | null
   codigo_oem: string | null
-  custo_litro: string
-  preco_litro: string
-  estoque_litros: string
-  estoque_minimo: string
+  custo_unitario: string
+  preco_unitario: string
+  estoque: number
+  estoque_minimo: number
   observacoes: string | null
   foto_url: string | null
   ativo: boolean
   estoque_baixo: boolean
   margem_lucro: string
-  lucro_por_litro: string
+  lucro_unitario: string
   created_at: string
   updated_at: string
 }
 
-export interface OleoCreate {
+export interface FiltroCreate {
   codigo_produto?: string | null
   nome: string
   marca: string
-  volume_liquido?: string | null
-  tipo_oleo_transmissao?: string | null
   codigo_oem?: string | null
-  custo_litro?: number
-  preco_litro?: number
-  estoque_litros?: number
+  custo_unitario?: number
+  preco_unitario?: number
+  estoque?: number
   estoque_minimo?: number
   observacoes?: string | null
 }
 
-export interface OleoUpdate {
+export interface FiltroUpdate {
   codigo_produto?: string | null
   nome?: string
   marca?: string
-  volume_liquido?: string | null
-  tipo_oleo_transmissao?: string | null
   codigo_oem?: string | null
-  custo_litro?: number
-  preco_litro?: number
-  estoque_litros?: number
+  custo_unitario?: number
+  preco_unitario?: number
+  estoque?: number
   estoque_minimo?: number
   ativo?: boolean
   observacoes?: string | null
 }
 
-export interface OleoListResponse {
-  items: Oleo[]
+export interface FiltroListResponse {
+  items: Filtro[]
   total: number
   page: number
   pages: number
 }
-

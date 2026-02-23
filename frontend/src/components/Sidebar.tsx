@@ -1,5 +1,5 @@
 import { NavLink, useLocation } from "react-router-dom"
-import { LayoutDashboard, Users, Droplets, Car, Wrench, Package, Hammer, X } from "lucide-react"
+import { LayoutDashboard, Users, Droplets, Car, Wrench, Package, Hammer, PackagePlus, Filter, DollarSign, X } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useEffect } from "react"
 
@@ -8,9 +8,12 @@ const navItems = [
   { to: "/clientes", icon: Users, label: "Clientes" },
   { to: "/veiculos", icon: Car, label: "Veículos" },
   { to: "/oleos", icon: Droplets, label: "Óleos" },
+  { to: "/filtros", icon: Filter, label: "Filtros" },
   { to: "/pecas", icon: Package, label: "Peças" },
   { to: "/servicos", icon: Hammer, label: "Serviços" },
+  { to: "/entradas", icon: PackagePlus, label: "Entradas" },
   { to: "/trocas", icon: Wrench, label: "Trocas" },
+  { to: "/financeiro", icon: DollarSign, label: "Financeiro" },
 ]
 
 function NavContent({ onNavigate }: { onNavigate?: () => void }) {

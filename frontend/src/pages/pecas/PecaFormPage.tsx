@@ -1,4 +1,4 @@
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { useNavigate, useParams } from "react-router-dom"
 import { useForm } from "react-hook-form"
 import { toast } from "sonner"
@@ -9,15 +9,25 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
+import {
+  formatMoeda,
+  formatDecimal,
+  parseMoeda,
+  parseDecimal,
+  numberToMoeda,
+  numberToDecimal,
+} from "@/lib/masks"
+
+const UNIDADES = [
+  { value: "un.", label: "Unidade (un.)" },
+  { value: "l", label: "Litro (l)" },
+  { value: "kg", label: "Quilograma (kg)" },
+]
 
 interface FormData {
   nome: string
   marca: string
   unidade: string
-  preco_custo: string
-  preco_venda: string
-  estoque: string
-  estoque_minimo: string
   comentarios: string
   observacoes: string
 }
@@ -31,7 +41,13 @@ export function PecaFormPage() {
   const createMutation = useCreatePeca()
   const updateMutation = useUpdatePeca()
 
-  const { register, handleSubmit, reset, formState: { errors } } = useForm<FormData>()
+  const { register, handleSubmit, reset, formState: { errors } } = useForm<FormData>({
+    defaultValues: { unidade: "un." },
+  })
+
+  const [precoVenda, setPrecoVenda] = useState("")
+  const [estoque, setEstoque] = useState("")
+  const [estoqueMinimo, setEstoqueMinimo] = useState("")
 
   useEffect(() => {
     if (peca) {
@@ -39,28 +55,35 @@ export function PecaFormPage() {
         nome: peca.nome,
         marca: peca.marca || "",
         unidade: peca.unidade,
-        preco_custo: peca.preco_custo,
-        preco_venda: peca.preco_venda,
-        estoque: peca.estoque,
-        estoque_minimo: peca.estoque_minimo,
         comentarios: peca.comentarios || "",
         observacoes: peca.observacoes || "",
       })
+      setPrecoVenda(numberToMoeda(peca.preco_venda))
+      setEstoque(numberToDecimal(peca.estoque))
+      setEstoqueMinimo(numberToDecimal(peca.estoque_minimo))
     }
   }, [peca, reset])
 
   async function onSubmit(formData: FormData) {
+    const vendaValue = parseMoeda(precoVenda)
+    if (!vendaValue) {
+      toast.error("Informe o preço de venda.")
+      return
+    }
+
     try {
-      const payload = {
+      const payload: Record<string, unknown> = {
         nome: formData.nome,
         marca: formData.marca || null,
-        unidade: formData.unidade || "unidade",
-        preco_custo: Number(formData.preco_custo) || 0,
-        preco_venda: Number(formData.preco_venda) || 0,
-        estoque: Number(formData.estoque) || 0,
-        estoque_minimo: Number(formData.estoque_minimo) || 5,
+        unidade: formData.unidade || "un.",
+        preco_venda: vendaValue,
+        estoque_minimo: parseDecimal(estoqueMinimo) || 5,
         comentarios: formData.comentarios || null,
         observacoes: formData.observacoes || null,
+      }
+
+      if (isEditing) {
+        payload.estoque = parseDecimal(estoque) || 0
       }
 
       if (isEditing) {
@@ -124,28 +147,53 @@ export function PecaFormPage() {
 
               <div className="space-y-2">
                 <Label htmlFor="unidade">Unidade de Medida</Label>
-                <Input id="unidade" placeholder="unidade, litro, pacote..." defaultValue="unidade" {...register("unidade")} />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="preco_custo">Preço de Custo (R$)</Label>
-                <Input id="preco_custo" type="number" step="0.01" min="0" placeholder="0.00" {...register("preco_custo")} />
+                <select
+                  id="unidade"
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  {...register("unidade")}
+                >
+                  {UNIDADES.map((u) => (
+                    <option key={u.value} value={u.value}>{u.label}</option>
+                  ))}
+                </select>
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="preco_venda">Preço de Venda (R$) *</Label>
-                <Input id="preco_venda" type="number" step="0.01" min="0" placeholder="0.00" {...register("preco_venda", { required: "Informe o preço de venda" })} />
-                {errors.preco_venda && <p className="text-xs text-destructive">{errors.preco_venda.message}</p>}
+                <Input
+                  id="preco_venda"
+                  type="text"
+                  inputMode="decimal"
+                  placeholder="0,00"
+                  value={precoVenda}
+                  onChange={(e) => setPrecoVenda(formatMoeda(e.target.value))}
+                />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="estoque">Estoque Atual</Label>
-                <Input id="estoque" type="number" step="0.1" min="0" placeholder="0" {...register("estoque")} />
-              </div>
+              {isEditing && (
+                <div className="space-y-2">
+                  <Label htmlFor="estoque">Estoque Atual</Label>
+                  <Input
+                    id="estoque"
+                    type="text"
+                    inputMode="decimal"
+                    placeholder="0"
+                    value={estoque}
+                    onChange={(e) => setEstoque(formatDecimal(e.target.value, 1))}
+                  />
+                </div>
+              )}
 
               <div className="space-y-2">
                 <Label htmlFor="estoque_minimo">Estoque Mínimo</Label>
-                <Input id="estoque_minimo" type="number" step="0.1" min="0" placeholder="5" {...register("estoque_minimo")} />
+                <Input
+                  id="estoque_minimo"
+                  type="text"
+                  inputMode="decimal"
+                  placeholder="5"
+                  value={estoqueMinimo}
+                  onChange={(e) => setEstoqueMinimo(formatDecimal(e.target.value, 1))}
+                />
               </div>
             </div>
 

@@ -25,6 +25,7 @@ class TrocaOleoBase(BaseModel):
     desconto_percentual: Decimal = Field(Decimal("0"), ge=0, le=100, description="% de desconto")
     desconto_valor: Decimal = Field(Decimal("0"), ge=0, description="Desconto fixo em R$")
     motivo_desconto: str | None = Field(None, max_length=200, description="Justificativa do desconto")
+    taxa_percentual: Decimal = Field(Decimal("0"), ge=0, le=100, description="% de taxa (ex: cartão)")
     proxima_troca_km: int | None = Field(None, ge=0, description="KM próxima troca")
     proxima_troca_data: date | None = Field(None, description="Data próxima troca")
     observacoes: str | None = Field(None, description="Observações")
@@ -59,6 +60,7 @@ class TrocaOleoUpdate(BaseModel):
     desconto_percentual: Decimal | None = Field(None, ge=0, le=100)
     desconto_valor: Decimal | None = Field(None, ge=0)
     motivo_desconto: str | None = Field(None, max_length=200)
+    taxa_percentual: Decimal | None = Field(None, ge=0, le=100)
     proxima_troca_km: int | None = Field(None, ge=0)
     proxima_troca_data: date | None = Field(None)
     observacoes: str | None = Field(None)
@@ -96,6 +98,79 @@ class TrocaOleoListResponse(BaseModel):
     total: int
     page: int
     pages: int
+
+
+class ItemTrocaFinanceiroResponse(BaseModel):
+    """Dados financeiros de um item da troca."""
+    id: int
+    peca_nome: str | None = None
+    quantidade: Decimal
+    valor_unitario: Decimal
+    valor_total: Decimal
+    custo_unitario: Decimal
+    lucro_item: Decimal
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class TrocaFinanceiroResponse(BaseModel):
+    """Dados financeiros de uma troca."""
+    id: int
+    data_troca: date
+    cliente_nome: str | None = None
+    veiculo_info: str | None = None
+    oleo_nome: str | None = None
+    valor_oleo: Decimal
+    valor_servico: Decimal
+    valor_total: Decimal
+    desconto_percentual: Decimal
+    desconto_valor: Decimal
+    taxa_percentual: Decimal
+    custo_oleo: Decimal
+    custo_pecas: Decimal
+    custo_total: Decimal
+    lucro_bruto: Decimal
+    margem_lucro: Decimal
+    itens: list[ItemTrocaFinanceiroResponse] = Field(default_factory=list)
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class FinanceiroResumoResponse(BaseModel):
+    """Resumo financeiro (cards)."""
+    total_trocas: int
+    faturamento_total: float
+    custo_total: float
+    lucro_bruto_total: float
+    margem_media: float
+    ticket_medio: float
+
+
+class FinanceiroListResponse(BaseModel):
+    """Resposta paginada do financeiro."""
+    items: list[TrocaFinanceiroResponse]
+    resumo: FinanceiroResumoResponse
+    total: int
+    page: int
+    pages: int
+
+
+class ProdutoFinanceiroResponse(BaseModel):
+    """Dados financeiros de um produto."""
+    tipo: str = Field(description="oleo, filtro ou peca")
+    id: int
+    nome: str
+    marca: str | None = None
+    custo: float
+    preco_venda: float
+    lucro_unitario: float
+    margem_lucro: float
+    estoque: float
+
+
+class ProdutoFinanceiroListResponse(BaseModel):
+    """Lista de produtos com dados financeiros."""
+    items: list[ProdutoFinanceiroResponse]
 
 
 class ProximasTrocasResponse(BaseModel):

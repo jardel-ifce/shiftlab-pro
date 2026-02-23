@@ -18,8 +18,15 @@ from src.domain.oleo import Oleo
 from src.domain.peca import Peca
 from src.domain.troca_oleo import TrocaOleo
 from src.domain.veiculo import Veiculo
+from src.domain.filtro import FiltroOleo
 from src.schemas.troca_oleo import (
+    FinanceiroListResponse,
+    FinanceiroResumoResponse,
+    ItemTrocaFinanceiroResponse,
+    ProdutoFinanceiroListResponse,
+    ProdutoFinanceiroResponse,
     ProximasTrocasResponse,
+    TrocaFinanceiroResponse,
     TrocaOleoCreate,
     TrocaOleoListResponse,
     TrocaOleoResponse,
@@ -156,15 +163,17 @@ class TrocaOleoService:
             valor_pecas += item_total
             pecas_to_deduct.append((peca, item_data.quantidade))
 
-        # Calcula valor total com descontos (agora inclui peças)
+        # Calcula valor total com descontos e taxa
         subtotal = data.valor_oleo + data.valor_servico + valor_pecas
         desconto_perc = subtotal * (data.desconto_percentual / 100)
-        valor_total = subtotal - desconto_perc - data.desconto_valor
+        subtotal_com_desconto = subtotal - desconto_perc - data.desconto_valor
+        taxa_valor = subtotal_com_desconto * (data.taxa_percentual / 100)
+        valor_total = subtotal_com_desconto - taxa_valor
 
         if valor_total < 0:
             valor_total = Decimal("0")
 
-        # Cria a troca
+        # Cria a troca (com snapshot do custo do óleo)
         troca = TrocaOleo(
             veiculo_id=data.veiculo_id,
             oleo_id=data.oleo_id,
@@ -177,7 +186,9 @@ class TrocaOleoService:
             desconto_percentual=data.desconto_percentual,
             desconto_valor=data.desconto_valor,
             motivo_desconto=data.motivo_desconto,
+            taxa_percentual=data.taxa_percentual,
             valor_total=valor_total,
+            custo_oleo=oleo.custo_litro * data.quantidade_litros,
             proxima_troca_km=data.proxima_troca_km,
             proxima_troca_data=data.proxima_troca_data,
             observacoes=data.observacoes
@@ -191,7 +202,7 @@ class TrocaOleoService:
         # Baixa estoque do óleo
         oleo.estoque_litros -= data.quantidade_litros
 
-        # Cria itens e baixa estoque das peças
+        # Cria itens e baixa estoque das peças (com snapshot do custo)
         for i, item_data in enumerate(data.itens):
             peca_obj, quantidade = pecas_to_deduct[i]
             item = ItemTroca(
@@ -200,6 +211,7 @@ class TrocaOleoService:
                 quantidade=item_data.quantidade,
                 valor_unitario=item_data.valor_unitario,
                 valor_total=item_data.quantidade * item_data.valor_unitario,
+                custo_unitario=peca_obj.preco_custo,
             )
             self.db.add(item)
             peca_obj.estoque -= quantidade
@@ -263,6 +275,7 @@ class TrocaOleoService:
                     quantidade=qty,
                     valor_unitario=unit_price,
                     valor_total=item_total,
+                    custo_unitario=peca.preco_custo,
                 )
                 self.db.add(item)
                 peca.estoque -= qty
@@ -272,21 +285,33 @@ class TrocaOleoService:
                 valor_pecas += existing_item.valor_total
 
         # Recalcula valor total se necessário
-        campos_valor = ["valor_oleo", "valor_servico", "desconto_percentual", "desconto_valor"]
+        campos_valor = ["valor_oleo", "valor_servico", "desconto_percentual", "desconto_valor", "taxa_percentual"]
         if any(campo in update_data for campo in campos_valor) or new_items_data is not None:
             valor_oleo = update_data.get("valor_oleo", troca.valor_oleo)
             valor_servico = update_data.get("valor_servico", troca.valor_servico)
             desc_perc = update_data.get("desconto_percentual", troca.desconto_percentual)
             desc_valor = update_data.get("desconto_valor", troca.desconto_valor)
+            taxa_perc = update_data.get("taxa_percentual", troca.taxa_percentual)
 
             subtotal = valor_oleo + valor_servico + valor_pecas
             desconto_perc = subtotal * (desc_perc / 100)
-            valor_total = subtotal - desconto_perc - desc_valor
+            subtotal_com_desconto = subtotal - desconto_perc - desc_valor
+            taxa_valor = subtotal_com_desconto * (taxa_perc / 100)
+            valor_total = subtotal_com_desconto - taxa_valor
 
             if valor_total < 0:
                 valor_total = Decimal("0")
 
             update_data["valor_total"] = valor_total
+
+        # Recalcular custo_oleo se óleo ou quantidade mudou
+        if "oleo_id" in update_data or "quantidade_litros" in update_data:
+            oleo_id_final = update_data.get("oleo_id", troca.oleo_id)
+            qtd_final = update_data.get("quantidade_litros", troca.quantidade_litros)
+            oleo_q = select(Oleo).where(Oleo.id == oleo_id_final)
+            oleo_obj = await self.db.scalar(oleo_q)
+            if oleo_obj:
+                update_data["custo_oleo"] = oleo_obj.custo_litro * qtd_final
 
         for field, value in update_data.items():
             setattr(troca, field, value)
@@ -425,3 +450,217 @@ class TrocaOleoService:
             "litros_utilizados": float(row[3] or 0),
             "ticket_medio": float(row[0] or 0) / total_trocas if total_trocas > 0 else 0
         }
+
+    async def get_financeiro(
+        self,
+        skip: int = 0,
+        limit: int = 20,
+        cliente_id: int | None = None,
+        data_inicio: date | None = None,
+        data_fim: date | None = None,
+    ) -> FinanceiroListResponse:
+        """Retorna dados financeiros com lucro por troca."""
+        # Base query com filtros
+        base = select(TrocaOleo)
+
+        if cliente_id:
+            base = base.join(Veiculo).where(Veiculo.cliente_id == cliente_id)
+        if data_inicio:
+            base = base.where(TrocaOleo.data_troca >= data_inicio)
+        if data_fim:
+            base = base.where(TrocaOleo.data_troca <= data_fim)
+
+        # Total count
+        count_q = select(func.count()).select_from(base.subquery())
+        total = await self.db.scalar(count_q) or 0
+
+        # Agregação para resumo (custo_pecas precisa ser calculado via itens)
+        agg_q = select(
+            func.count(TrocaOleo.id),
+            func.sum(TrocaOleo.valor_total),
+            func.sum(TrocaOleo.custo_oleo),
+        ).select_from(base.subquery())
+        agg_result = await self.db.execute(agg_q)
+        agg_row = agg_result.one()
+
+        total_trocas = agg_row[0] or 0
+        faturamento_total = float(agg_row[1] or 0)
+        custo_oleo_total = float(agg_row[2] or 0)
+
+        # Custo de peças total (via join com itens)
+        custo_pecas_q = (
+            select(func.sum(ItemTroca.custo_unitario * ItemTroca.quantidade))
+            .join(TrocaOleo, ItemTroca.troca_id == TrocaOleo.id)
+        )
+        if cliente_id:
+            custo_pecas_q = custo_pecas_q.join(
+                Veiculo, TrocaOleo.veiculo_id == Veiculo.id
+            ).where(Veiculo.cliente_id == cliente_id)
+        if data_inicio:
+            custo_pecas_q = custo_pecas_q.where(TrocaOleo.data_troca >= data_inicio)
+        if data_fim:
+            custo_pecas_q = custo_pecas_q.where(TrocaOleo.data_troca <= data_fim)
+
+        custo_pecas_total = float(await self.db.scalar(custo_pecas_q) or 0)
+        custo_total_geral = custo_oleo_total + custo_pecas_total
+        lucro_bruto_total = faturamento_total - custo_total_geral
+        margem_media = (
+            (lucro_bruto_total / faturamento_total) * 100
+            if faturamento_total > 0
+            else 0
+        )
+        ticket_medio = faturamento_total / total_trocas if total_trocas > 0 else 0
+
+        resumo = FinanceiroResumoResponse(
+            total_trocas=total_trocas,
+            faturamento_total=faturamento_total,
+            custo_total=custo_total_geral,
+            lucro_bruto_total=lucro_bruto_total,
+            margem_media=round(margem_media, 1),
+            ticket_medio=round(ticket_medio, 2),
+        )
+
+        # Query paginada com relacionamentos
+        detail_q = (
+            base.options(
+                selectinload(TrocaOleo.veiculo).selectinload(Veiculo.cliente),
+                selectinload(TrocaOleo.oleo),
+                selectinload(TrocaOleo.itens).selectinload(ItemTroca.peca),
+            )
+            .offset(skip)
+            .limit(limit)
+            .order_by(TrocaOleo.data_troca.desc())
+        )
+        result = await self.db.execute(detail_q)
+        trocas = result.scalars().all()
+
+        items = []
+        for t in trocas:
+            cliente_nome = (
+                t.veiculo.cliente.nome
+                if t.veiculo and t.veiculo.cliente
+                else None
+            )
+            veiculo_info = (
+                f"{t.veiculo.placa} - {t.veiculo.marca} {t.veiculo.modelo}"
+                if t.veiculo
+                else None
+            )
+            oleo_nome = (
+                f"{t.oleo.marca} {t.oleo.nome}" if t.oleo else None
+            )
+
+            itens_fin = []
+            for item in t.itens:
+                itens_fin.append(ItemTrocaFinanceiroResponse(
+                    id=item.id,
+                    peca_nome=item.peca.nome if item.peca else None,
+                    quantidade=item.quantidade,
+                    valor_unitario=item.valor_unitario,
+                    valor_total=item.valor_total,
+                    custo_unitario=item.custo_unitario,
+                    lucro_item=item.lucro_item,
+                ))
+
+            items.append(TrocaFinanceiroResponse(
+                id=t.id,
+                data_troca=t.data_troca,
+                cliente_nome=cliente_nome,
+                veiculo_info=veiculo_info,
+                oleo_nome=oleo_nome,
+                valor_oleo=t.valor_oleo,
+                valor_servico=t.valor_servico,
+                valor_total=t.valor_total,
+                desconto_percentual=t.desconto_percentual,
+                desconto_valor=t.desconto_valor,
+                taxa_percentual=t.taxa_percentual,
+                custo_oleo=t.custo_oleo,
+                custo_pecas=t.custo_pecas,
+                custo_total=t.custo_total,
+                lucro_bruto=t.lucro_bruto,
+                margem_lucro=t.margem_lucro,
+                itens=itens_fin,
+            ))
+
+        pages = (total + limit - 1) // limit if limit > 0 else 1
+        page = (skip // limit) + 1 if limit > 0 else 1
+
+        return FinanceiroListResponse(
+            items=items,
+            resumo=resumo,
+            total=total,
+            page=page,
+            pages=pages,
+        )
+
+    async def get_financeiro_produtos(
+        self,
+        tipo: str | None = None,
+    ) -> ProdutoFinanceiroListResponse:
+        """Retorna dados financeiros unificados de todos os produtos."""
+        items: list[ProdutoFinanceiroResponse] = []
+
+        # Óleos
+        if not tipo or tipo == "oleo":
+            q = select(Oleo).where(Oleo.ativo.is_(True)).order_by(Oleo.nome)
+            result = await self.db.execute(q)
+            for o in result.scalars().all():
+                custo = float(o.custo_litro)
+                venda = float(o.preco_litro)
+                lucro = venda - custo
+                margem = ((lucro / custo) * 100) if custo > 0 else 0
+                items.append(ProdutoFinanceiroResponse(
+                    tipo="oleo",
+                    id=o.id,
+                    nome=o.nome,
+                    marca=o.marca,
+                    custo=custo,
+                    preco_venda=venda,
+                    lucro_unitario=round(lucro, 2),
+                    margem_lucro=round(margem, 1),
+                    estoque=float(o.estoque_litros),
+                ))
+
+        # Filtros
+        if not tipo or tipo == "filtro":
+            q = select(FiltroOleo).where(FiltroOleo.ativo.is_(True)).order_by(FiltroOleo.nome)
+            result = await self.db.execute(q)
+            for f in result.scalars().all():
+                custo = float(f.custo_unitario)
+                venda = float(f.preco_unitario)
+                lucro = venda - custo
+                margem = ((lucro / custo) * 100) if custo > 0 else 0
+                items.append(ProdutoFinanceiroResponse(
+                    tipo="filtro",
+                    id=f.id,
+                    nome=f.nome,
+                    marca=f.marca,
+                    custo=custo,
+                    preco_venda=venda,
+                    lucro_unitario=round(lucro, 2),
+                    margem_lucro=round(margem, 1),
+                    estoque=float(f.estoque),
+                ))
+
+        # Peças
+        if not tipo or tipo == "peca":
+            q = select(Peca).where(Peca.ativo.is_(True)).order_by(Peca.nome)
+            result = await self.db.execute(q)
+            for p in result.scalars().all():
+                custo = float(p.preco_custo)
+                venda = float(p.preco_venda)
+                lucro = venda - custo
+                margem = ((lucro / custo) * 100) if custo > 0 else 0
+                items.append(ProdutoFinanceiroResponse(
+                    tipo="peca",
+                    id=p.id,
+                    nome=p.nome,
+                    marca=p.marca,
+                    custo=custo,
+                    preco_venda=venda,
+                    lucro_unitario=round(lucro, 2),
+                    margem_lucro=round(margem, 1),
+                    estoque=float(p.estoque),
+                ))
+
+        return ProdutoFinanceiroListResponse(items=items)

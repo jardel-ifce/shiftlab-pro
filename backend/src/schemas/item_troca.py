@@ -26,6 +26,7 @@ class ItemTrocaResponse(BaseModel):
     quantidade: Decimal
     valor_unitario: Decimal
     valor_total: Decimal
+    custo_unitario: Decimal = Field(default=Decimal("0"))
     peca: PecaResponse | None = None
     created_at: datetime
 

@@ -15,6 +15,11 @@ import { ServicosPage } from "@/pages/servicos/ServicosPage"
 import { ServicoFormPage } from "@/pages/servicos/ServicoFormPage"
 import { TrocasPage } from "@/pages/trocas/TrocasPage"
 import { TrocaFormPage } from "@/pages/trocas/TrocaFormPage"
+import { EntradasPage } from "@/pages/entradas/EntradasPage"
+import { EntradaFormPage } from "@/pages/entradas/EntradaFormPage"
+import { FiltrosPage } from "@/pages/filtros/FiltrosPage"
+import { FiltroFormPage } from "@/pages/filtros/FiltroFormPage"
+import { FinanceiroPage } from "@/pages/financeiro/FinanceiroPage"
 
 export default function App() {
   return (
@@ -49,6 +54,15 @@ export default function App() {
             <Route path="/trocas" element={<TrocasPage />} />
             <Route path="/trocas/nova" element={<TrocaFormPage />} />
             <Route path="/trocas/:id/editar" element={<TrocaFormPage />} />
+
+            <Route path="/filtros" element={<FiltrosPage />} />
+            <Route path="/filtros/novo" element={<FiltroFormPage />} />
+            <Route path="/filtros/:id/editar" element={<FiltroFormPage />} />
+
+            <Route path="/entradas" element={<EntradasPage />} />
+            <Route path="/entradas/nova" element={<EntradaFormPage />} />
+
+            <Route path="/financeiro" element={<FinanceiroPage />} />
           </Route>
         </Route>
 
