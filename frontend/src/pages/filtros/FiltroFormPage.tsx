@@ -50,6 +50,7 @@ export function FiltroFormPage() {
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const [precoUnitario, setPrecoUnitario] = useState("")
+  const [estoqueAtual, setEstoqueAtual] = useState("")
   const [estoqueMinimo, setEstoqueMinimo] = useState("2")
 
   useEffect(() => {
@@ -62,6 +63,7 @@ export function FiltroFormPage() {
         observacoes: filtro.observacoes || "",
       })
       setPrecoUnitario(numberToMoeda(filtro.preco_unitario))
+      setEstoqueAtual(String(filtro.estoque))
       setEstoqueMinimo(String(filtro.estoque_minimo))
     }
   }, [filtro, reset])
@@ -126,7 +128,8 @@ export function FiltroFormPage() {
       let filtroId: number
 
       if (isEditing) {
-        await updateMutation.mutateAsync({ id: Number(id), payload })
+        const editPayload = { ...payload, estoque: Number(estoqueAtual) || 0 }
+        await updateMutation.mutateAsync({ id: Number(id), payload: editPayload })
         filtroId = Number(id)
         toast.success("Filtro atualizado com sucesso!")
       } else {
@@ -283,6 +286,21 @@ export function FiltroFormPage() {
                   onChange={(e) => setPrecoUnitario(formatMoeda(e.target.value))}
                 />
               </div>
+
+              {isEditing && (
+                <div className="space-y-2">
+                  <Label htmlFor="estoque_atual">Estoque Atual (un.)</Label>
+                  <Input
+                    id="estoque_atual"
+                    type="number"
+                    inputMode="numeric"
+                    min="0"
+                    placeholder="0"
+                    value={estoqueAtual}
+                    onChange={(e) => setEstoqueAtual(e.target.value.replace(/\D/g, ""))}
+                  />
+                </div>
+              )}
 
               <div className="space-y-2">
                 <Label htmlFor="estoque_minimo">Estoque Mínimo (un.)</Label>

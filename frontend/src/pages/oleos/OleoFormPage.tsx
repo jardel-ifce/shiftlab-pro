@@ -57,6 +57,7 @@ export function OleoFormPage() {
 
   // Masked fields state
   const [precoLitro, setPrecoLitro] = useState("")
+  const [estoqueLitros, setEstoqueLitros] = useState("")
   const [estoqueMinimo, setEstoqueMinimo] = useState("")
 
   useEffect(() => {
@@ -71,6 +72,7 @@ export function OleoFormPage() {
         observacoes: oleo.observacoes || "",
       })
       setPrecoLitro(numberToMoeda(oleo.preco_litro))
+      setEstoqueLitros(numberToDecimal(oleo.estoque_litros))
       setEstoqueMinimo(numberToDecimal(oleo.estoque_minimo))
     }
   }, [oleo, reset])
@@ -141,7 +143,8 @@ export function OleoFormPage() {
       let oleoId: number
 
       if (isEditing) {
-        await updateMutation.mutateAsync({ id: Number(id), payload })
+        const editPayload = { ...payload, estoque_litros: parseDecimal(estoqueLitros) || 0 }
+        await updateMutation.mutateAsync({ id: Number(id), payload: editPayload })
         oleoId = Number(id)
         toast.success("Óleo atualizado com sucesso!")
       } else {
@@ -311,6 +314,20 @@ export function OleoFormPage() {
                   onChange={(e) => setPrecoLitro(formatMoeda(e.target.value))}
                 />
               </div>
+
+              {isEditing && (
+                <div className="space-y-2">
+                  <Label htmlFor="estoque_litros">Estoque Atual (L)</Label>
+                  <Input
+                    id="estoque_litros"
+                    type="text"
+                    inputMode="decimal"
+                    placeholder="0,00"
+                    value={estoqueLitros}
+                    onChange={(e) => setEstoqueLitros(formatDecimal(e.target.value))}
+                  />
+                </div>
+              )}
 
               <div className="space-y-2">
                 <Label htmlFor="estoque_minimo">Estoque Mínimo (L)</Label>
