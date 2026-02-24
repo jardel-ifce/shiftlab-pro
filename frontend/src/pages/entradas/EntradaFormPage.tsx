@@ -79,21 +79,22 @@ export function EntradaFormPage() {
   const [quantidade, setQuantidade] = useState("")
   const [custoUnitario, setCustoUnitario] = useState("")
 
+  const isOleo = produtoSelecionado?.tipo === "oleo"
   const qtdNum = parseDecimal(quantidade)
   const custoNum = parseMoeda(custoUnitario)
   const custoTotal = qtdNum * custoNum
-
-  const isOleo = produtoSelecionado?.tipo === "oleo"
 
   function selecionarProduto(p: ProdutoBusca) {
     setProdutoSelecionado(p)
     setBuscaInput("")
     setShowDropdown(false)
+    setQuantidade("")
   }
 
   function limparProduto() {
     setProdutoSelecionado(null)
     setBuscaInput("")
+    setQuantidade("")
   }
 
   async function onSubmit(formData: FormData) {
@@ -238,10 +239,17 @@ export function EntradaFormPage() {
                 <Input
                   id="quantidade"
                   type="text"
-                  inputMode="decimal"
-                  placeholder="0,00"
+                  inputMode={isOleo ? "decimal" : "numeric"}
+                  placeholder={isOleo ? "0,00" : "0"}
                   value={quantidade}
-                  onChange={(e) => setQuantidade(formatDecimal(e.target.value, 2))}
+                  onChange={(e) => {
+                    if (isOleo) {
+                      setQuantidade(formatDecimal(e.target.value, 2))
+                    } else {
+                      const val = e.target.value.replace(/\D/g, "")
+                      setQuantidade(val)
+                    }
+                  }}
                 />
               </div>
 
