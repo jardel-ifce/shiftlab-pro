@@ -13,6 +13,7 @@ import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog"
 import { HoverCard, HoverCardTrigger, HoverCardContent } from "@/components/ui/hover-card"
+import { Carousel } from "@/components/ui/carousel"
 import type { Filtro } from "@/types/filtro"
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8001"
@@ -120,7 +121,7 @@ export function FiltrosPage() {
                     {filtro.codigo_produto || "-"}
                   </TableCell>
                   <TableCell className="font-medium">
-                    {filtro.foto_url ? (
+                    {filtro.fotos?.length > 0 ? (
                       <HoverCard>
                         <HoverCardTrigger>
                           <span
@@ -131,10 +132,10 @@ export function FiltrosPage() {
                           </span>
                         </HoverCardTrigger>
                         <HoverCardContent side="right" className="w-52 p-2">
-                          <img
-                            src={`${BASE_URL}${filtro.foto_url}`}
+                          <Carousel
+                            images={filtro.fotos.map((f) => ({ id: f.id, url: `${BASE_URL}${f.url}` }))}
                             alt={filtro.nome}
-                            className="h-40 w-full rounded-md object-contain"
+                            className="h-40"
                           />
                           <p className="mt-2 text-center text-xs font-medium">
                             {filtro.marca} {filtro.nome}
@@ -215,13 +216,12 @@ export function FiltrosPage() {
       </Dialog>
 
       <Dialog open={!!fotoPreview} onOpenChange={() => setFotoPreview(null)}>
-        <DialogContent onClose={() => setFotoPreview(null)} className="max-w-sm">
-          {fotoPreview?.foto_url && (
+        <DialogContent onClose={() => setFotoPreview(null)} className="max-w-md">
+          {fotoPreview && fotoPreview.fotos?.length > 0 && (
             <div className="space-y-3">
-              <img
-                src={`${BASE_URL}${fotoPreview.foto_url}`}
+              <Carousel
+                images={fotoPreview.fotos.map((f) => ({ id: f.id, url: `${BASE_URL}${f.url}` }))}
                 alt={fotoPreview.nome}
-                className="w-full rounded-md object-contain"
               />
               <div className="text-center">
                 <p className="font-semibold">{fotoPreview.marca} {fotoPreview.nome}</p>

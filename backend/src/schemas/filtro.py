@@ -5,7 +5,7 @@ Schemas Pydantic para Filtro de Óleo.
 from datetime import datetime
 from decimal import Decimal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, computed_field
 
 
 class FiltroBase(BaseModel):
@@ -38,19 +38,35 @@ class FiltroUpdate(BaseModel):
     estoque_minimo: int | None = Field(None, ge=0)
     ativo: bool | None = Field(None)
     observacoes: str | None = Field(None)
-    foto_url: str | None = Field(None)
+
+
+class FotoFiltroResponse(BaseModel):
+    """Schema de resposta para foto de filtro."""
+    id: int
+    filtro_id: int
+    url: str
+    ordem: int
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
 
 
 class FiltroResponse(FiltroBase):
     """Schema de resposta."""
     id: int
     ativo: bool
-    foto_url: str | None = Field(None)
+    fotos: list[FotoFiltroResponse] = Field(default_factory=list, description="Fotos do filtro")
     created_at: datetime
     updated_at: datetime
     estoque_baixo: bool = Field(description="Se estoque está abaixo do mínimo")
     margem_lucro: Decimal = Field(description="Margem de lucro em %")
     lucro_unitario: Decimal = Field(description="Lucro bruto unitário")
+
+    @computed_field
+    @property
+    def foto_url(self) -> str | None:
+        """Backward-compat: URL da foto principal."""
+        return self.fotos[0].url if self.fotos else None
 
     model_config = ConfigDict(from_attributes=True)
 

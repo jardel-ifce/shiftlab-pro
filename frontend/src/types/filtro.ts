@@ -1,3 +1,11 @@
+export interface FotoFiltro {
+  id: number
+  filtro_id: number
+  url: string
+  ordem: number
+  created_at: string
+}
+
 export interface Filtro {
   id: number
   codigo_produto: string | null
@@ -10,6 +18,7 @@ export interface Filtro {
   estoque_minimo: number
   observacoes: string | null
   foto_url: string | null
+  fotos: FotoFiltro[]
   ativo: boolean
   estoque_baixo: boolean
   margem_lucro: string

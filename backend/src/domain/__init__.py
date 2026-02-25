@@ -17,6 +17,7 @@ from src.domain.base import BaseModel
 from src.domain.cliente import Cliente
 from src.domain.configuracao import Configuracao
 from src.domain.despesa import Despesa
+from src.domain.foto_filtro import FotoFiltro
 from src.domain.item_troca import ItemTroca
 from src.domain.modelo_referencia import ModeloReferencia
 from src.domain.montadora import Montadora
@@ -31,6 +32,7 @@ __all__ = [
     "Cliente",
     "Configuracao",
     "Despesa",
+    "FotoFiltro",
     "Veiculo",
     "TipoCambio",
     "Oleo",

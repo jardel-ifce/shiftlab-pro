@@ -76,7 +76,7 @@ export function useUploadFotoFiltro() {
     mutationFn: async ({ id, file }: { id: number; file: File }) => {
       const formData = new FormData()
       formData.append("file", file)
-      const { data } = await api.post<Filtro>(`/filtros/${id}/foto`, formData, {
+      const { data } = await api.post<Filtro>(`/filtros/${id}/fotos`, formData, {
         headers: { "Content-Type": "multipart/form-data" },
       })
       return data
@@ -88,8 +88,8 @@ export function useUploadFotoFiltro() {
 export function useDeleteFotoFiltro() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async (id: number) => {
-      const { data } = await api.delete<Filtro>(`/filtros/${id}/foto`)
+    mutationFn: async ({ filtroId, fotoId }: { filtroId: number; fotoId: number }) => {
+      const { data } = await api.delete<Filtro>(`/filtros/${filtroId}/fotos/${fotoId}`)
       return data
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: [KEY] }),

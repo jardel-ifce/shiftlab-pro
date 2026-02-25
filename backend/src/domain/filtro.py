@@ -7,7 +7,7 @@ Representa um filtro de óleo de câmbio disponível para uso em trocas.
 from decimal import Decimal
 
 from sqlalchemy import Boolean, Integer, Numeric, String, Text
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.domain.base import BaseModel
 
@@ -84,11 +84,18 @@ class FiltroOleo(BaseModel):
         comment="Notas adicionais"
     )
 
-    foto_url: Mapped[str | None] = mapped_column(
-        String(255),
-        nullable=True,
-        comment="Caminho da foto do produto"
+    fotos: Mapped[list["FotoFiltro"]] = relationship(
+        "FotoFiltro",
+        back_populates="filtro",
+        cascade="all, delete-orphan",
+        order_by="FotoFiltro.ordem",
+        lazy="selectin"
     )
+
+    @property
+    def foto_url(self) -> str | None:
+        """Backward-compat: URL da foto principal."""
+        return self.fotos[0].url if self.fotos else None
 
     @property
     def estoque_baixo(self) -> bool:

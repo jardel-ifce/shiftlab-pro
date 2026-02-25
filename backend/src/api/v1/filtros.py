@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.auth.dependencies import CurrentActiveUser, CurrentAdminUser
 from src.config import settings
 from src.database import get_db
+from src.domain.foto_filtro import FotoFiltro
 from src.schemas.filtro import (
     FiltroCreate,
     FiltroListResponse,
@@ -103,7 +104,7 @@ async def desativar_filtro(
 UPLOAD_DIR = Path(settings.UPLOAD_DIR) / "filtros"
 
 
-@router.post("/{filtro_id}/foto", response_model=FiltroResponse, summary="Upload de foto do filtro")
+@router.post("/{filtro_id}/fotos", response_model=FiltroResponse, summary="Upload de foto do filtro")
 async def upload_foto(
     filtro_id: int,
     file: UploadFile,
@@ -114,6 +115,9 @@ async def upload_foto(
     filtro = await service.get_by_id(filtro_id)
     if not filtro:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Filtro não encontrado")
+
+    if len(filtro.fotos) >= 5:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Máximo de 5 fotos por filtro.")
 
     ext = (file.filename or "").rsplit(".", 1)[-1].lower()
     if ext not in ("jpg", "jpeg", "png"):
@@ -126,17 +130,17 @@ async def upload_foto(
             detail=f"Arquivo muito grande. Máximo: {settings.MAX_UPLOAD_SIZE_MB}MB"
         )
 
-    if filtro.foto_url:
-        old_path = Path(settings.UPLOAD_DIR) / filtro.foto_url.removeprefix("/uploads/")
-        if old_path.exists():
-            old_path.unlink()
-
     UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
-    filename = f"{filtro_id}_{int(time.time())}.{ext}"
+    filename = f"{filtro_id}_{int(time.time())}_{len(filtro.fotos)}.{ext}"
     filepath = UPLOAD_DIR / filename
     filepath.write_bytes(contents)
 
-    filtro.foto_url = f"/uploads/filtros/{filename}"
+    nova_foto = FotoFiltro(
+        filtro_id=filtro_id,
+        url=f"/uploads/filtros/{filename}",
+        ordem=len(filtro.fotos),
+    )
+    db.add(nova_foto)
     await db.flush()
     await db.refresh(filtro)
     await db.commit()
@@ -144,9 +148,10 @@ async def upload_foto(
     return FiltroResponse.model_validate(filtro)
 
 
-@router.delete("/{filtro_id}/foto", response_model=FiltroResponse, summary="Remover foto do filtro")
+@router.delete("/{filtro_id}/fotos/{foto_id}", response_model=FiltroResponse, summary="Remover foto do filtro")
 async def remover_foto(
     filtro_id: int,
+    foto_id: int,
     user: CurrentAdminUser = None,
     service: FiltroService = Depends(get_service),
     db: AsyncSession = Depends(get_db),
@@ -155,12 +160,22 @@ async def remover_foto(
     if not filtro:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Filtro não encontrado")
 
-    if filtro.foto_url:
-        old_path = Path(settings.UPLOAD_DIR) / filtro.foto_url.removeprefix("/uploads/")
-        if old_path.exists():
-            old_path.unlink()
+    foto = next((f for f in filtro.fotos if f.id == foto_id), None)
+    if not foto:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Foto não encontrada")
 
-    filtro.foto_url = None
+    # Deletar arquivo do disco
+    old_path = Path(settings.UPLOAD_DIR) / foto.url.removeprefix("/uploads/")
+    if old_path.exists():
+        old_path.unlink()
+
+    await db.delete(foto)
+
+    # Reordenar fotos restantes
+    remaining = [f for f in filtro.fotos if f.id != foto_id]
+    for i, f in enumerate(remaining):
+        f.ordem = i
+
     await db.flush()
     await db.refresh(filtro)
     await db.commit()

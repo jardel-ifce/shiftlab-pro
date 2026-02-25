@@ -24,6 +24,8 @@ import {
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8001"
 const BASE_URL = API_URL.replace(/\/api\/v1\/?$/, "")
 
+const MAX_FOTOS = 5
+
 interface FormData {
   codigo_produto: string
   nome: string
@@ -45,13 +47,18 @@ export function FiltroFormPage() {
 
   const { register, handleSubmit, reset, formState: { errors } } = useForm<FormData>()
 
-  const [fotoFile, setFotoFile] = useState<File | null>(null)
-  const [fotoPreview, setFotoPreview] = useState<string | null>(null)
+  // Fotos: novas (ainda não enviadas)
+  const [newFiles, setNewFiles] = useState<File[]>([])
+  const [newPreviews, setNewPreviews] = useState<string[]>([])
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const [precoUnitario, setPrecoUnitario] = useState("")
   const [estoqueAtual, setEstoqueAtual] = useState("")
   const [estoqueMinimo, setEstoqueMinimo] = useState("2")
+
+  const existingFotos = filtro?.fotos ?? []
+  const totalFotos = existingFotos.length + newFiles.length
+  const canAddMore = totalFotos < MAX_FOTOS
 
   useEffect(() => {
     if (filtro) {
@@ -68,39 +75,57 @@ export function FiltroFormPage() {
     }
   }, [filtro, reset])
 
+  // Cleanup preview URLs on unmount
   useEffect(() => {
     return () => {
-      if (fotoPreview) URL.revokeObjectURL(fotoPreview)
+      newPreviews.forEach((url) => URL.revokeObjectURL(url))
     }
-  }, [fotoPreview])
+  }, [newPreviews])
 
-  function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (!file) return
-    if (!["image/jpeg", "image/png"].includes(file.type)) {
-      toast.error("Formato inválido. Use JPG ou PNG.")
+  function handleFilesSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files || [])
+    if (!files.length) return
+
+    const remaining = MAX_FOTOS - totalFotos
+    if (remaining <= 0) {
+      toast.error(`Máximo de ${MAX_FOTOS} fotos por filtro.`)
       return
     }
-    if (file.size > 10 * 1024 * 1024) {
-      toast.error("Arquivo muito grande. Máximo: 10MB.")
-      return
-    }
-    if (fotoPreview) URL.revokeObjectURL(fotoPreview)
-    setFotoFile(file)
-    setFotoPreview(URL.createObjectURL(file))
-  }
 
-  function handleRemovePreview() {
-    if (fotoPreview) URL.revokeObjectURL(fotoPreview)
-    setFotoFile(null)
-    setFotoPreview(null)
+    const validFiles: File[] = []
+    const previews: string[] = []
+
+    for (const file of files.slice(0, remaining)) {
+      if (!["image/jpeg", "image/png"].includes(file.type)) {
+        toast.error(`"${file.name}": formato inválido. Use JPG ou PNG.`)
+        continue
+      }
+      if (file.size > 10 * 1024 * 1024) {
+        toast.error(`"${file.name}": muito grande. Máximo: 10MB.`)
+        continue
+      }
+      validFiles.push(file)
+      previews.push(URL.createObjectURL(file))
+    }
+
+    if (validFiles.length) {
+      setNewFiles((prev) => [...prev, ...validFiles])
+      setNewPreviews((prev) => [...prev, ...previews])
+    }
+
     if (fileInputRef.current) fileInputRef.current.value = ""
   }
 
-  async function handleDeleteFoto() {
-    if (!isEditing || !filtro?.foto_url) return
+  function handleRemoveNewFile(index: number) {
+    URL.revokeObjectURL(newPreviews[index])
+    setNewFiles((prev) => prev.filter((_, i) => i !== index))
+    setNewPreviews((prev) => prev.filter((_, i) => i !== index))
+  }
+
+  async function handleDeleteExistingFoto(fotoId: number) {
+    if (!isEditing) return
     try {
-      await deleteFotoMutation.mutateAsync(Number(id))
+      await deleteFotoMutation.mutateAsync({ filtroId: Number(id), fotoId })
       toast.success("Foto removida!")
     } catch {
       toast.error("Erro ao remover foto.")
@@ -138,11 +163,18 @@ export function FiltroFormPage() {
         toast.success("Filtro cadastrado com sucesso!")
       }
 
-      if (fotoFile) {
-        try {
-          await uploadFotoMutation.mutateAsync({ id: filtroId, file: fotoFile })
-        } catch {
-          toast.error("Filtro salvo, mas erro ao enviar foto.")
+      // Upload de novas fotos
+      if (newFiles.length > 0) {
+        let erros = 0
+        for (const file of newFiles) {
+          try {
+            await uploadFotoMutation.mutateAsync({ id: filtroId, file })
+          } catch {
+            erros++
+          }
+        }
+        if (erros > 0) {
+          toast.error(`Filtro salvo, mas ${erros} foto(s) falharam no envio.`)
         }
       }
 
@@ -165,7 +197,6 @@ export function FiltroFormPage() {
   }
 
   const isPending = createMutation.isPending || updateMutation.isPending || uploadFotoMutation.isPending
-  const fotoAtual = filtro?.foto_url ? `${BASE_URL}${filtro.foto_url}` : null
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
@@ -187,62 +218,74 @@ export function FiltroFormPage() {
         <Card>
           <CardHeader><CardTitle>Identificação do Produto</CardTitle></CardHeader>
           <CardContent className="space-y-4">
-            {/* Foto */}
+            {/* Fotos */}
             <div className="space-y-3">
-              <Label>Foto do Produto</Label>
-              <div className="flex items-start gap-4">
-                <div className="relative flex h-32 w-32 shrink-0 items-center justify-center overflow-hidden rounded-lg border-2 border-dashed border-muted-foreground/25 bg-muted/50">
-                  {fotoPreview ? (
-                    <>
-                      <img src={fotoPreview} alt="Preview" className="h-full w-full object-cover" />
-                      <button
-                        type="button"
-                        onClick={handleRemovePreview}
-                        className="absolute -right-1 -top-1 rounded-full bg-destructive p-1 text-destructive-foreground shadow-sm hover:bg-destructive/90"
-                      >
-                        <Trash2 className="h-3 w-3" />
-                      </button>
-                    </>
-                  ) : fotoAtual && !fotoFile ? (
-                    <>
-                      <img src={fotoAtual} alt="Foto atual" className="h-full w-full object-cover" />
-                      <button
-                        type="button"
-                        onClick={handleDeleteFoto}
-                        disabled={deleteFotoMutation.isPending}
-                        className="absolute -right-1 -top-1 rounded-full bg-destructive p-1 text-destructive-foreground shadow-sm hover:bg-destructive/90"
-                      >
-                        {deleteFotoMutation.isPending ? (
-                          <Loader2 className="h-3 w-3 animate-spin" />
-                        ) : (
-                          <Trash2 className="h-3 w-3" />
-                        )}
-                      </button>
-                    </>
-                  ) : (
-                    <ImagePlus className="h-8 w-8 text-muted-foreground/50" />
-                  )}
-                </div>
-                <div className="space-y-2">
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/jpeg,image/png"
-                    onChange={handleFileSelect}
-                    className="hidden"
-                  />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => fileInputRef.current?.click()}
+              <Label>Fotos do Produto ({totalFotos}/{MAX_FOTOS})</Label>
+              <div className="flex flex-wrap gap-3">
+                {/* Fotos existentes (servidor) */}
+                {existingFotos.map((foto) => (
+                  <div
+                    key={foto.id}
+                    className="relative flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-lg border bg-muted/50"
                   >
-                    <ImagePlus className="mr-2 h-4 w-4" />
-                    Escolher Imagem
-                  </Button>
-                  <p className="text-xs text-muted-foreground">JPG ou PNG, máx. 10MB</p>
-                </div>
+                    <img
+                      src={`${BASE_URL}${foto.url}`}
+                      alt={`Foto ${foto.ordem + 1}`}
+                      className="h-full w-full object-cover"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteExistingFoto(foto.id)}
+                      disabled={deleteFotoMutation.isPending}
+                      className="absolute -right-1 -top-1 rounded-full bg-destructive p-1 text-destructive-foreground shadow-sm hover:bg-destructive/90"
+                    >
+                      {deleteFotoMutation.isPending ? (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      ) : (
+                        <Trash2 className="h-3 w-3" />
+                      )}
+                    </button>
+                  </div>
+                ))}
+
+                {/* Previews de novas fotos */}
+                {newPreviews.map((preview, i) => (
+                  <div
+                    key={`new-${i}`}
+                    className="relative flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-dashed border-primary bg-muted/50"
+                  >
+                    <img src={preview} alt={`Nova ${i + 1}`} className="h-full w-full object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveNewFile(i)}
+                      className="absolute -right-1 -top-1 rounded-full bg-destructive p-1 text-destructive-foreground shadow-sm hover:bg-destructive/90"
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </button>
+                  </div>
+                ))}
+
+                {/* Botão adicionar */}
+                {canAddMore && (
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="flex h-24 w-24 shrink-0 items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/25 bg-muted/50 hover:border-muted-foreground/50 hover:bg-muted transition-colors"
+                  >
+                    <ImagePlus className="h-6 w-6 text-muted-foreground/50" />
+                  </button>
+                )}
               </div>
+
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/png"
+                multiple
+                onChange={handleFilesSelect}
+                className="hidden"
+              />
+              <p className="text-xs text-muted-foreground">JPG ou PNG, máx. 10MB cada. Até {MAX_FOTOS} fotos.</p>
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2">
