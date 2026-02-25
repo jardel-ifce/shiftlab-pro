@@ -844,18 +844,6 @@ export function TrocaFormPage() {
                     {...register("motivo_desconto")}
                   />
                 </div>
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-muted-foreground">Taxa (%):</span>
-                  <Input
-                    type="number"
-                    step="0.1"
-                    min="0"
-                    max="100"
-                    placeholder="0"
-                    className="h-8 w-28 text-right text-sm"
-                    {...register("taxa_percentual")}
-                  />
-                </div>
                 {taxaVal > 0 && (
                   <div className="flex justify-between text-xs text-red-500">
                     <span>Taxa ({Number(taxaPerc).toFixed(1)}%):</span>
@@ -872,12 +860,12 @@ export function TrocaFormPage() {
             </div>
           </div>
 
-          {/* ─── FORMA DE PAGAMENTO ─── */}
+          {/* ─── FORMA DE PAGAMENTO + TAXA ─── */}
           <div className="border-b-2 border-zinc-300 p-4 dark:border-zinc-600">
             <p className="mb-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">
               Forma de Pagamento
             </p>
-            <div className="flex flex-wrap gap-4">
+            <div className="flex flex-wrap items-center gap-4">
               {FORMAS_PAGAMENTO.map((forma) => (
                 <label key={forma} className="flex items-center gap-2 cursor-pointer text-sm">
                   <input
@@ -895,6 +883,18 @@ export function TrocaFormPage() {
                   {forma}
                 </label>
               ))}
+              <div className="ml-auto flex items-center gap-2 text-sm">
+                <span className="text-muted-foreground">Taxa (%):</span>
+                <Input
+                  type="number"
+                  step="0.1"
+                  min="0"
+                  max="100"
+                  placeholder="0"
+                  className="h-8 w-20 text-right text-sm"
+                  {...register("taxa_percentual")}
+                />
+              </div>
             </div>
           </div>
 
