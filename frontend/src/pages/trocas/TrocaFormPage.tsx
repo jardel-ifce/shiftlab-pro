@@ -51,12 +51,20 @@ interface ProdutoBusca {
   unidade: string
 }
 
+const FORMAS_PAGAMENTO = [
+  "Dinheiro",
+  "PIX",
+  "Cartão de Débito",
+  "Cartão de Crédito",
+]
+
 const DRAFT_KEY = "shiftlab_troca_draft"
 
 interface DraftState {
   form: Partial<FormData>
   clienteId: number | null
   itensProdutos: ItemProduto[]
+  formasPagamento?: string[]
 }
 
 function saveDraft(state: DraftState) {
@@ -226,6 +234,7 @@ export function TrocaFormPage() {
   const updateMutation = useUpdateTroca()
 
   const [itensProdutos, setItensProdutos] = useState<ItemProduto[]>([])
+  const [formasPagamento, setFormasPagamento] = useState<string[]>([])
   const [servicoId, setServicoId] = useState<string>("")
   const restoredRef = useRef(false)
   const submittedRef = useRef(false)
@@ -361,6 +370,9 @@ export function TrocaFormPage() {
         proxima_troca_data: troca.proxima_troca_data || "",
         observacoes: troca.observacoes || "",
       })
+      if (troca.forma_pagamento) {
+        setFormasPagamento(troca.forma_pagamento.split(",").map((s) => s.trim()))
+      }
       if (troca.itens?.length) {
         setItensProdutos(
           troca.itens.map((it) => ({
@@ -392,6 +404,9 @@ export function TrocaFormPage() {
     if (draft.itensProdutos?.length) {
       setItensProdutos(draft.itensProdutos)
     }
+    if (draft.formasPagamento?.length) {
+      setFormasPagamento(draft.formasPagamento)
+    }
     if (draft.clienteId) {
       carregarPorId(draft.clienteId)
     }
@@ -418,8 +433,9 @@ export function TrocaFormPage() {
       form: allFormValues,
       clienteId: cliente?.id ?? null,
       itensProdutos,
+      formasPagamento,
     })
-  }, [allFormValues, cliente, itensProdutos, isEditing])
+  }, [allFormValues, cliente, itensProdutos, formasPagamento, isEditing])
 
   // Calculations
   const subtotalOleo = Number(valorOleo) || 0
@@ -509,6 +525,7 @@ export function TrocaFormPage() {
         proxima_troca_km: formData.proxima_troca_km ? Number(formData.proxima_troca_km) : null,
         proxima_troca_data: formData.proxima_troca_data || null,
         observacoes: formData.observacoes || null,
+        forma_pagamento: formasPagamento.length > 0 ? formasPagamento.join(", ") : null,
         itens,
       }
 
@@ -852,6 +869,32 @@ export function TrocaFormPage() {
                   </div>
                 </div>
               </div>
+            </div>
+          </div>
+
+          {/* ─── FORMA DE PAGAMENTO ─── */}
+          <div className="border-b-2 border-zinc-300 p-4 dark:border-zinc-600">
+            <p className="mb-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">
+              Forma de Pagamento
+            </p>
+            <div className="flex flex-wrap gap-4">
+              {FORMAS_PAGAMENTO.map((forma) => (
+                <label key={forma} className="flex items-center gap-2 cursor-pointer text-sm">
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4 rounded border-zinc-300 accent-primary"
+                    checked={formasPagamento.includes(forma)}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setFormasPagamento((prev) => [...prev, forma])
+                      } else {
+                        setFormasPagamento((prev) => prev.filter((f) => f !== forma))
+                      }
+                    }}
+                  />
+                  {forma}
+                </label>
+              ))}
             </div>
           </div>
 

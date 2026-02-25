@@ -8,7 +8,7 @@ Representa o registro de uma troca de óleo de câmbio.
 from datetime import date, datetime
 from decimal import Decimal
 
-from sqlalchemy import Date, DateTime, ForeignKey, Integer, Numeric, Text
+from sqlalchemy import Date, DateTime, ForeignKey, Integer, Numeric, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.domain.base import BaseModel
@@ -138,6 +138,13 @@ class TrocaOleo(BaseModel):
         default=0,
         nullable=False,
         comment="Percentual de taxa (ex: taxa cartão)"
+    )
+
+    # Forma de pagamento
+    forma_pagamento: Mapped[str | None] = mapped_column(
+        String(100),
+        nullable=True,
+        comment="Forma(s) de pagamento (ex: PIX, Dinheiro, Cartão Crédito)"
     )
 
     # Próxima troca

@@ -26,6 +26,7 @@ class TrocaOleoBase(BaseModel):
     desconto_valor: Decimal = Field(Decimal("0"), ge=0, description="Desconto fixo em R$")
     motivo_desconto: str | None = Field(None, max_length=200, description="Justificativa do desconto")
     taxa_percentual: Decimal = Field(Decimal("0"), ge=0, le=100, description="% de taxa (ex: cartão)")
+    forma_pagamento: str | None = Field(None, max_length=100, description="Forma(s) de pagamento")
     proxima_troca_km: int | None = Field(None, ge=0, description="KM próxima troca")
     proxima_troca_data: date | None = Field(None, description="Data próxima troca")
     observacoes: str | None = Field(None, description="Observações")
@@ -61,6 +62,7 @@ class TrocaOleoUpdate(BaseModel):
     desconto_valor: Decimal | None = Field(None, ge=0)
     motivo_desconto: str | None = Field(None, max_length=200)
     taxa_percentual: Decimal | None = Field(None, ge=0, le=100)
+    forma_pagamento: str | None = Field(None, max_length=100)
     proxima_troca_km: int | None = Field(None, ge=0)
     proxima_troca_data: date | None = Field(None)
     observacoes: str | None = Field(None)
@@ -126,6 +128,7 @@ class TrocaFinanceiroResponse(BaseModel):
     desconto_percentual: Decimal
     desconto_valor: Decimal
     taxa_percentual: Decimal
+    forma_pagamento: str | None = None
     custo_oleo: Decimal
     custo_pecas: Decimal
     custo_total: Decimal
