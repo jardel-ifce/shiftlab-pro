@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { DollarSign, TrendingUp, TrendingDown, Search, X, Receipt, Percent, BadgeDollarSign, Save } from "lucide-react"
+import { DollarSign, TrendingUp, TrendingDown, Search, X, Receipt, Percent, BadgeDollarSign, Save, Users } from "lucide-react"
 import { useFinanceiro, useFinanceiroProdutos } from "@/hooks/useFinanceiro"
 import { useImposto, useUpdateImposto } from "@/hooks/useConfiguracoes"
 import { useBuscaCliente } from "@/hooks/useClientes"
@@ -11,6 +11,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table"
 import { Skeleton } from "@/components/ui/skeleton"
+import type { FinanceiroResumo, FinanceiroListResponse } from "@/types/financeiro"
 
 const TIPO_LABELS: Record<string, string> = {
   oleo: "Óleo",
@@ -50,36 +51,7 @@ const MESES = [
 ]
 
 export function FinanceiroPage() {
-  const [tab, setTab] = useState<"trocas" | "produtos">("trocas")
-
-  return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Financeiro</h1>
-        <p className="text-muted-foreground">Controle de lucro por troca e por produto</p>
-      </div>
-
-      <div className="flex gap-2">
-        <Button
-          variant={tab === "trocas" ? "default" : "outline"}
-          onClick={() => setTab("trocas")}
-        >
-          Lucro por Troca
-        </Button>
-        <Button
-          variant={tab === "produtos" ? "default" : "outline"}
-          onClick={() => setTab("produtos")}
-        >
-          Lucro por Produto
-        </Button>
-      </div>
-
-      {tab === "trocas" ? <TabTrocas /> : <TabProdutos />}
-    </div>
-  )
-}
-
-function TabTrocas() {
+  const [tab, setTab] = useState<"trocas" | "produtos" | "socios">("trocas")
   const [page, setPage] = useState(1)
 
   // Imposto
@@ -144,6 +116,126 @@ function TabTrocas() {
   const temFiltro = ano || clienteFiltro
 
   return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight">Financeiro</h1>
+        <p className="text-muted-foreground">Controle de lucro por troca e por produto</p>
+      </div>
+
+      <div className="flex gap-2">
+        <Button
+          variant={tab === "trocas" ? "default" : "outline"}
+          onClick={() => setTab("trocas")}
+        >
+          Lucro por Troca
+        </Button>
+        <Button
+          variant={tab === "produtos" ? "default" : "outline"}
+          onClick={() => setTab("produtos")}
+        >
+          Lucro por Produto
+        </Button>
+        <Button
+          variant={tab === "socios" ? "default" : "outline"}
+          onClick={() => setTab("socios")}
+        >
+          <Users className="mr-2 h-4 w-4" />
+          Sócios
+        </Button>
+      </div>
+
+      {tab === "trocas" ? (
+        <TabTrocas
+          data={data}
+          isLoading={isLoading}
+          page={page}
+          setPage={setPage}
+          ano={ano}
+          setAno={setAno}
+          mes={mes}
+          setMes={setMes}
+          dia={dia}
+          setDia={setDia}
+          anos={anos}
+          dias={dias}
+          temFiltro={!!temFiltro}
+          limparFiltros={limparFiltros}
+          impostoAtual={impostoAtual}
+          setImpostoInput={setImpostoInput}
+          salvarImposto={salvarImposto}
+          updateImpostoPending={updateImposto.isPending}
+          searchInput={searchInput}
+          setSearchInput={setSearchInput}
+          clienteFiltro={clienteFiltro}
+          sugestoes={sugestoes}
+          buscando={buscando}
+          buscarSugestoes={buscarSugestoes}
+          selecionar={selecionar}
+          limparCliente={limparCliente}
+        />
+      ) : tab === "produtos" ? (
+        <TabProdutos />
+      ) : (
+        <TabSocios
+          data={data}
+          isLoading={isLoading}
+          ano={ano}
+          setAno={setAno}
+          mes={mes}
+          setMes={setMes}
+          dia={dia}
+          setDia={setDia}
+          anos={anos}
+          dias={dias}
+          temFiltro={!!temFiltro}
+          limparFiltros={limparFiltros}
+          setPage={setPage}
+        />
+      )}
+    </div>
+  )
+}
+
+/* ─── TAB TROCAS ─── */
+
+interface TabTrocasProps {
+  data: FinanceiroListResponse | undefined
+  isLoading: boolean
+  page: number
+  setPage: (fn: (p: number) => number) => void
+  ano: string
+  setAno: (v: string) => void
+  mes: string
+  setMes: (v: string) => void
+  dia: string
+  setDia: (v: string) => void
+  anos: string[]
+  dias: string[]
+  temFiltro: boolean
+  limparFiltros: () => void
+  impostoAtual: string
+  setImpostoInput: (v: string) => void
+  salvarImposto: () => void
+  updateImpostoPending: boolean
+  searchInput: string
+  setSearchInput: (v: string) => void
+  clienteFiltro: { id: number; nome: string } | null
+  sugestoes: { id: number; nome: string; cpf_cnpj: string }[]
+  buscando: boolean
+  buscarSugestoes: (v: string) => void
+  selecionar: (c: { id: number; nome: string; cpf_cnpj: string }) => void
+  limparCliente: () => void
+}
+
+function TabTrocas({
+  data, isLoading, page, setPage,
+  ano, setAno, mes, setMes, dia, setDia, anos, dias,
+  temFiltro, limparFiltros,
+  impostoAtual, setImpostoInput, salvarImposto, updateImpostoPending,
+  searchInput, setSearchInput,
+  clienteFiltro, sugestoes, buscando, buscarSugestoes, selecionar, limparCliente,
+}: TabTrocasProps) {
+  return (
     <>
       {/* Filtros */}
       <Card>
@@ -153,7 +245,7 @@ function TabTrocas() {
               <label className="mb-1 block text-xs font-medium text-muted-foreground">Ano</label>
               <select
                 value={ano}
-                onChange={(e) => { setAno(e.target.value); setMes(""); setDia(""); setPage(1) }}
+                onChange={(e) => { setAno(e.target.value); setMes(""); setDia(""); setPage(() => 1) }}
                 className="h-10 w-[100px] rounded-md border border-input bg-background px-3 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
               >
                 <option value="">Todos</option>
@@ -165,7 +257,7 @@ function TabTrocas() {
               <label className="mb-1 block text-xs font-medium text-muted-foreground">Mês</label>
               <select
                 value={mes}
-                onChange={(e) => { setMes(e.target.value); setDia(""); setPage(1) }}
+                onChange={(e) => { setMes(e.target.value); setDia(""); setPage(() => 1) }}
                 disabled={!ano}
                 className="h-10 w-[140px] rounded-md border border-input bg-background px-3 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
               >
@@ -178,7 +270,7 @@ function TabTrocas() {
               <label className="mb-1 block text-xs font-medium text-muted-foreground">Dia</label>
               <select
                 value={dia}
-                onChange={(e) => { setDia(e.target.value); setPage(1) }}
+                onChange={(e) => { setDia(e.target.value); setPage(() => 1) }}
                 disabled={!mes}
                 className="h-10 w-[90px] rounded-md border border-input bg-background px-3 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
               >
@@ -210,7 +302,7 @@ function TabTrocas() {
                     variant="outline"
                     className="h-10 w-10"
                     onClick={salvarImposto}
-                    disabled={updateImposto.isPending}
+                    disabled={updateImpostoPending}
                   >
                     <Save className="h-4 w-4" />
                   </Button>
@@ -355,7 +447,7 @@ function TabTrocas() {
                           onClick={() => {
                             selecionar(c)
                             setSearchInput("")
-                            setPage(1)
+                            setPage(() => 1)
                           }}
                         >
                           {c.nome}
@@ -444,6 +536,201 @@ function TabTrocas() {
     </>
   )
 }
+
+/* ─── TAB SÓCIOS ─── */
+
+interface TabSociosProps {
+  data: FinanceiroListResponse | undefined
+  isLoading: boolean
+  ano: string
+  setAno: (v: string) => void
+  mes: string
+  setMes: (v: string) => void
+  dia: string
+  setDia: (v: string) => void
+  anos: string[]
+  dias: string[]
+  temFiltro: boolean
+  limparFiltros: () => void
+  setPage: (fn: (p: number) => number) => void
+}
+
+function TabSocios({
+  data, isLoading,
+  ano, setAno, mes, setMes, dia, setDia, anos, dias,
+  temFiltro, limparFiltros, setPage,
+}: TabSociosProps) {
+  const resumo = data?.resumo
+
+  const half = (v: number) => v / 2
+
+  function SocioCard({ nome, resumo }: { nome: string; resumo: FinanceiroResumo }) {
+    const lucroLiq = half(resumo.lucro_liquido)
+    return (
+      <Card className="border-2 border-primary/20">
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <Users className="h-5 w-5 text-primary" />
+            {nome}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="flex justify-between text-sm">
+            <span className="text-muted-foreground">Investimento (custo)</span>
+            <span className="font-medium text-red-600">{formatBRL(half(resumo.custo_total))}</span>
+          </div>
+          <div className="flex justify-between text-sm">
+            <span className="text-muted-foreground">Faturamento</span>
+            <span className="font-medium text-emerald-600">{formatBRL(half(resumo.faturamento_total))}</span>
+          </div>
+          <div className="flex justify-between text-sm">
+            <span className="text-muted-foreground">Lucro Bruto</span>
+            <span className={`font-medium ${half(resumo.lucro_bruto_total) >= 0 ? "text-emerald-600" : "text-red-600"}`}>
+              {formatBRL(half(resumo.lucro_bruto_total))}
+            </span>
+          </div>
+          <div className="flex justify-between text-sm">
+            <span className="text-muted-foreground">Impostos ({resumo.imposto_percentual}%)</span>
+            <span className="font-medium text-orange-600">-{formatBRL(half(resumo.imposto_valor))}</span>
+          </div>
+          <div className="flex justify-between text-sm">
+            <span className="text-muted-foreground">Despesas</span>
+            <span className="font-medium text-orange-600">-{formatBRL(half(resumo.despesas_total))}</span>
+          </div>
+          <div className="border-t pt-3">
+            <div className="flex justify-between">
+              <span className="font-bold">Lucro Líquido</span>
+              <span className={`text-xl font-bold ${lucroLiq >= 0 ? "text-emerald-600" : "text-red-600"}`}>
+                {formatBRL(lucroLiq)}
+              </span>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  return (
+    <>
+      {/* Filtros de data */}
+      <Card>
+        <CardContent className="pt-6">
+          <div className="flex flex-wrap items-end gap-3">
+            <div>
+              <label className="mb-1 block text-xs font-medium text-muted-foreground">Ano</label>
+              <select
+                value={ano}
+                onChange={(e) => { setAno(e.target.value); setMes(""); setDia(""); setPage(() => 1) }}
+                className="h-10 w-[100px] rounded-md border border-input bg-background px-3 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+              >
+                <option value="">Todos</option>
+                {anos.map((a) => <option key={a} value={a}>{a}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-muted-foreground">Mês</label>
+              <select
+                value={mes}
+                onChange={(e) => { setMes(e.target.value); setDia(""); setPage(() => 1) }}
+                disabled={!ano}
+                className="h-10 w-[140px] rounded-md border border-input bg-background px-3 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <option value="">Todos</option>
+                {MESES.map((m) => <option key={m.value} value={String(m.value)}>{m.label}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-muted-foreground">Dia</label>
+              <select
+                value={dia}
+                onChange={(e) => { setDia(e.target.value); setPage(() => 1) }}
+                disabled={!mes}
+                className="h-10 w-[90px] rounded-md border border-input bg-background px-3 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <option value="">Todos</option>
+                {dias.map((d) => <option key={d} value={d}>{d}</option>)}
+              </select>
+            </div>
+            {temFiltro && (
+              <Button variant="ghost" size="sm" onClick={limparFiltros}>Limpar</Button>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {isLoading ? (
+        <div className="grid gap-6 md:grid-cols-2">
+          <Skeleton className="h-[320px]" />
+          <Skeleton className="h-[320px]" />
+        </div>
+      ) : !resumo ? (
+        <p className="py-8 text-center text-muted-foreground">Nenhum dado financeiro encontrado.</p>
+      ) : (
+        <>
+          {/* Cards dos sócios */}
+          <div className="grid gap-6 md:grid-cols-2">
+            <SocioCard nome="Jardel Rodrigues" resumo={resumo} />
+            <SocioCard nome="Antônio William" resumo={resumo} />
+          </div>
+
+          {/* Tabela resumo comparativa */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Resumo Comparativo</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Sócio</TableHead>
+                    <TableHead className="text-right">Investimento</TableHead>
+                    <TableHead className="text-right">Faturamento</TableHead>
+                    <TableHead className="text-right">Lucro Bruto</TableHead>
+                    <TableHead className="text-right">Impostos</TableHead>
+                    <TableHead className="text-right">Despesas</TableHead>
+                    <TableHead className="text-right">Lucro Líquido</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {["Jardel Rodrigues", "Antônio William"].map((nome) => (
+                    <TableRow key={nome}>
+                      <TableCell className="font-medium">{nome}</TableCell>
+                      <TableCell className="text-right text-red-600">{formatBRL(half(resumo.custo_total))}</TableCell>
+                      <TableCell className="text-right text-emerald-600">{formatBRL(half(resumo.faturamento_total))}</TableCell>
+                      <TableCell className={`text-right ${half(resumo.lucro_bruto_total) >= 0 ? "text-emerald-600" : "text-red-600"}`}>
+                        {formatBRL(half(resumo.lucro_bruto_total))}
+                      </TableCell>
+                      <TableCell className="text-right text-orange-600">-{formatBRL(half(resumo.imposto_valor))}</TableCell>
+                      <TableCell className="text-right text-orange-600">-{formatBRL(half(resumo.despesas_total))}</TableCell>
+                      <TableCell className={`text-right font-bold ${half(resumo.lucro_liquido) >= 0 ? "text-emerald-600" : "text-red-600"}`}>
+                        {formatBRL(half(resumo.lucro_liquido))}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  <TableRow className="border-t-2 font-bold">
+                    <TableCell>Total</TableCell>
+                    <TableCell className="text-right text-red-600">{formatBRL(resumo.custo_total)}</TableCell>
+                    <TableCell className="text-right text-emerald-600">{formatBRL(resumo.faturamento_total)}</TableCell>
+                    <TableCell className={`text-right ${resumo.lucro_bruto_total >= 0 ? "text-emerald-600" : "text-red-600"}`}>
+                      {formatBRL(resumo.lucro_bruto_total)}
+                    </TableCell>
+                    <TableCell className="text-right text-orange-600">-{formatBRL(resumo.imposto_valor)}</TableCell>
+                    <TableCell className="text-right text-orange-600">-{formatBRL(resumo.despesas_total)}</TableCell>
+                    <TableCell className={`text-right ${resumo.lucro_liquido >= 0 ? "text-emerald-600" : "text-red-600"}`}>
+                      {formatBRL(resumo.lucro_liquido)}
+                    </TableCell>
+                  </TableRow>
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </>
+      )}
+    </>
+  )
+}
+
+/* ─── TAB PRODUTOS ─── */
 
 function TabProdutos() {
   const [tipoFiltro, setTipoFiltro] = useState<string | undefined>(undefined)
