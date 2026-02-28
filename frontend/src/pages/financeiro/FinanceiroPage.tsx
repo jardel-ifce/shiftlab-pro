@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/table"
 import { Skeleton } from "@/components/ui/skeleton"
 import type { FinanceiroResumo, FinanceiroListResponse } from "@/types/financeiro"
+import type { Cliente } from "@/types/cliente"
 
 const TIPO_LABELS: Record<string, string> = {
   oleo: "Óleo",
@@ -219,11 +220,11 @@ interface TabTrocasProps {
   updateImpostoPending: boolean
   searchInput: string
   setSearchInput: (v: string) => void
-  clienteFiltro: { id: number; nome: string } | null
-  sugestoes: { id: number; nome: string; cpf_cnpj: string }[]
+  clienteFiltro: Cliente | null
+  sugestoes: Cliente[]
   buscando: boolean
   buscarSugestoes: (v: string) => void
-  selecionar: (c: { id: number; nome: string; cpf_cnpj: string }) => void
+  selecionar: (c: Cliente) => void
   limparCliente: () => void
 }
 
