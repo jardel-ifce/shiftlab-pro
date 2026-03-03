@@ -131,13 +131,14 @@ class EntradaEstoqueService:
         return entrada
 
     async def delete(self, entrada_id: int) -> bool:
-        """Remove entrada e reverte estoque."""
+        """Remove entrada, reverte estoque e recalcula custo médio."""
         entrada = await self.get_by_id(entrada_id)
         if not entrada:
             raise ValueError("Entrada não encontrada")
 
         produto = await self._get_produto(entrada.tipo_produto, entrada.produto_id)
         if produto:
+            # Reverte estoque
             if entrada.tipo_produto == "oleo":
                 produto.estoque_litros = max(
                     Decimal("0"),
@@ -154,7 +155,48 @@ class EntradaEstoqueService:
         await self.db.delete(entrada)
         await self.db.flush()
 
+        # Recalcula custo médio a partir das entradas restantes
+        if produto:
+            await self._recalcular_custo_medio(entrada.tipo_produto, entrada.produto_id, produto)
+
         return True
+
+    async def _recalcular_custo_medio(self, tipo: str, produto_id: int, produto) -> None:
+        """Recalcula o custo médio do produto a partir de todas as entradas restantes."""
+        query = (
+            select(EntradaEstoque)
+            .where(EntradaEstoque.tipo_produto == tipo)
+            .where(EntradaEstoque.produto_id == produto_id)
+            .order_by(EntradaEstoque.data_compra.asc())
+        )
+        result = await self.db.execute(query)
+        entradas = result.scalars().all()
+
+        if not entradas:
+            # Sem entradas restantes: custo volta a zero
+            if tipo == "oleo":
+                produto.custo_litro = Decimal("0")
+            elif tipo == "filtro":
+                produto.custo_unitario = Decimal("0")
+            elif tipo == "peca":
+                produto.preco_custo = Decimal("0")
+        else:
+            # Recalcula custo médio ponderado de todas as entradas
+            total_qtd = Decimal("0")
+            total_valor = Decimal("0")
+            for e in entradas:
+                total_qtd += e.quantidade_litros
+                total_valor += e.custo_total
+            custo_medio = total_valor / total_qtd if total_qtd > 0 else Decimal("0")
+
+            if tipo == "oleo":
+                produto.custo_litro = custo_medio
+            elif tipo == "filtro":
+                produto.custo_unitario = custo_medio
+            elif tipo == "peca":
+                produto.preco_custo = custo_medio
+
+        await self.db.flush()
 
     async def buscar_produtos(
         self, q: str, tipo: str | None = None, limit: int = 10
