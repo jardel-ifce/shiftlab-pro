@@ -28,7 +28,6 @@ const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8001"
 const BASE_URL = API_URL.replace(/\/api\/v1\/?$/, "")
 
 interface FormData {
-  codigo_produto: string
   nome: string
   marca: string
   volume_liquido: string
@@ -63,7 +62,6 @@ export function OleoFormPage() {
   useEffect(() => {
     if (oleo) {
       reset({
-        codigo_produto: oleo.codigo_produto || "",
         nome: oleo.nome,
         marca: oleo.marca,
         volume_liquido: oleo.volume_liquido || "",
@@ -129,7 +127,6 @@ export function OleoFormPage() {
 
     try {
       const payload = {
-        codigo_produto: formData.codigo_produto || null,
         nome: formData.nome,
         marca: formData.marca,
         volume_liquido: formData.volume_liquido || null,
@@ -263,11 +260,6 @@ export function OleoFormPage() {
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="codigo_produto">Código do Produto</Label>
-                <Input id="codigo_produto" placeholder="5508, 1760..." {...register("codigo_produto")} />
-              </div>
-
               <div className="space-y-2">
                 <Label htmlFor="nome">Nome *</Label>
                 <Input id="nome" placeholder="Dexron VI, Multi ATF..." {...register("nome", { required: "Nome é obrigatório", minLength: { value: 2, message: "Mínimo 2 caracteres" } })} />

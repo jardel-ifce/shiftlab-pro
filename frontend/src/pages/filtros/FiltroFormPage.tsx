@@ -27,7 +27,6 @@ const BASE_URL = API_URL.replace(/\/api\/v1\/?$/, "")
 const MAX_FOTOS = 5
 
 interface FormData {
-  codigo_produto: string
   nome: string
   marca: string
   codigo_oem: string
@@ -63,7 +62,6 @@ export function FiltroFormPage() {
   useEffect(() => {
     if (filtro) {
       reset({
-        codigo_produto: filtro.codigo_produto || "",
         nome: filtro.nome,
         marca: filtro.marca,
         codigo_oem: filtro.codigo_oem || "",
@@ -141,7 +139,6 @@ export function FiltroFormPage() {
 
     try {
       const payload = {
-        codigo_produto: formData.codigo_produto || null,
         nome: formData.nome,
         marca: formData.marca,
         codigo_oem: formData.codigo_oem || null,
@@ -289,11 +286,6 @@ export function FiltroFormPage() {
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="codigo_produto">Código do Produto</Label>
-                <Input id="codigo_produto" placeholder="6209, 6210..." {...register("codigo_produto")} />
-              </div>
-
               <div className="space-y-2">
                 <Label htmlFor="nome">Modelo do Filtro *</Label>
                 <Input id="nome" placeholder="WFC960, WFC995..." {...register("nome", { required: "Nome é obrigatório", minLength: { value: 2, message: "Mínimo 2 caracteres" } })} />

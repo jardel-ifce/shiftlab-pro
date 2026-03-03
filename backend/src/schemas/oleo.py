@@ -12,7 +12,6 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 class OleoBase(BaseModel):
     """Campos comuns para Óleo."""
-    codigo_produto: str | None = Field(None, max_length=30, description="Código do produto (fornecedor/interno)")
     nome: str = Field(..., min_length=2, max_length=100, description="Nome do produto")
     marca: str = Field(..., min_length=2, max_length=50, description="Fabricante")
     volume_liquido: str | None = Field(None, max_length=20, description="Ex: 1 L")
@@ -32,7 +31,6 @@ class OleoCreate(OleoBase):
 
 class OleoUpdate(BaseModel):
     """Schema para atualizar óleo (todos opcionais)."""
-    codigo_produto: str | None = Field(None, max_length=30)
     nome: str | None = Field(None, min_length=2, max_length=100)
     marca: str | None = Field(None, min_length=2, max_length=50)
     volume_liquido: str | None = Field(None, max_length=20)
@@ -50,6 +48,7 @@ class OleoUpdate(BaseModel):
 class OleoResponse(OleoBase):
     """Schema de resposta com dados do banco."""
     id: int
+    codigo_produto: str | None = None
     ativo: bool
     foto_url: str | None = Field(None, description="Caminho da foto do produto")
     created_at: datetime

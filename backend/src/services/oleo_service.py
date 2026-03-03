@@ -70,10 +70,17 @@ class OleoService:
             pages=pages
         )
 
+    async def _proximo_codigo(self) -> str:
+        """Gera o próximo código sequencial para óleo."""
+        query = select(func.max(Oleo.id))
+        max_id = await self.db.scalar(query) or 0
+        return str(max_id + 1).zfill(4)
+
     async def create(self, data: OleoCreate) -> Oleo:
         """Cria um novo óleo."""
+        codigo = await self._proximo_codigo()
         oleo = Oleo(
-            codigo_produto=data.codigo_produto,
+            codigo_produto=codigo,
             nome=data.nome,
             marca=data.marca,
             volume_liquido=data.volume_liquido,

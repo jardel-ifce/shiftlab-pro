@@ -21,7 +21,6 @@ export interface Oleo {
 }
 
 export interface OleoCreate {
-  codigo_produto?: string | null
   nome: string
   marca: string
   volume_liquido?: string | null
@@ -35,7 +34,6 @@ export interface OleoCreate {
 }
 
 export interface OleoUpdate {
-  codigo_produto?: string | null
   nome?: string
   marca?: string
   volume_liquido?: string | null

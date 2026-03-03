@@ -10,7 +10,6 @@ from pydantic import BaseModel, ConfigDict, Field, computed_field
 
 class FiltroBase(BaseModel):
     """Campos comuns para Filtro de Óleo."""
-    codigo_produto: str | None = Field(None, max_length=30, description="Código do produto (fornecedor/interno)")
     nome: str = Field(..., min_length=2, max_length=100, description="Modelo do filtro")
     marca: str = Field(..., min_length=2, max_length=50, description="Fabricante")
     codigo_oem: str | None = Field(None, max_length=100, description="Referência OEM")
@@ -28,7 +27,6 @@ class FiltroCreate(FiltroBase):
 
 class FiltroUpdate(BaseModel):
     """Schema para atualizar filtro (todos opcionais)."""
-    codigo_produto: str | None = Field(None, max_length=30)
     nome: str | None = Field(None, min_length=2, max_length=100)
     marca: str | None = Field(None, min_length=2, max_length=50)
     codigo_oem: str | None = Field(None, max_length=100)
@@ -54,6 +52,7 @@ class FotoFiltroResponse(BaseModel):
 class FiltroResponse(FiltroBase):
     """Schema de resposta."""
     id: int
+    codigo_produto: str | None = None
     ativo: bool
     fotos: list[FotoFiltroResponse] = Field(default_factory=list, description="Fotos do filtro")
     created_at: datetime

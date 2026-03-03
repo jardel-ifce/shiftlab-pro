@@ -62,9 +62,16 @@ class FiltroService:
             pages=pages
         )
 
+    async def _proximo_codigo(self) -> str:
+        """Gera o próximo código sequencial para filtro."""
+        query = select(func.max(FiltroOleo.id))
+        max_id = await self.db.scalar(query) or 0
+        return str(max_id + 1).zfill(4)
+
     async def create(self, data: FiltroCreate) -> FiltroOleo:
+        codigo = await self._proximo_codigo()
         filtro = FiltroOleo(
-            codigo_produto=data.codigo_produto,
+            codigo_produto=codigo,
             nome=data.nome,
             marca=data.marca,
             codigo_oem=data.codigo_oem,

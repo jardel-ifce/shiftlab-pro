@@ -28,7 +28,6 @@ export interface Filtro {
 }
 
 export interface FiltroCreate {
-  codigo_produto?: string | null
   nome: string
   marca: string
   codigo_oem?: string | null
@@ -40,7 +39,6 @@ export interface FiltroCreate {
 }
 
 export interface FiltroUpdate {
-  codigo_produto?: string | null
   nome?: string
   marca?: string
   codigo_oem?: string | null
