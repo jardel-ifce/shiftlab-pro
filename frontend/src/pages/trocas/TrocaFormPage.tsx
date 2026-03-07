@@ -804,12 +804,16 @@ export function TrocaFormPage() {
                       ))}
                     </select>
                     <Input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      placeholder="0.00"
+                      type="text"
+                      inputMode="decimal"
+                      placeholder="R$ 0,00"
                       className="h-8 w-28 text-right text-sm"
-                      {...register("valor_servico")}
+                      value={valorServico && Number(valorServico) ? `R$ ${Number(valorServico).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : ""}
+                      onChange={(e) => {
+                        const raw = e.target.value.replace(/[^\d]/g, "")
+                        const num = Number(raw) / 100
+                        setValue("valor_servico", num > 0 ? num.toFixed(2) : "0")
+                      }}
                     />
                   </div>
                 </div>
