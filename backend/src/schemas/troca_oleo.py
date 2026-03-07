@@ -151,6 +151,7 @@ class FinanceiroResumoResponse(BaseModel):
     imposto_valor: float
     despesas_total: float
     lucro_liquido: float
+    investimento_total: float = 0.0
 
 
 class FinanceiroListResponse(BaseModel):

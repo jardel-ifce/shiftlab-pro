@@ -13,6 +13,7 @@ from sqlalchemy.orm import selectinload
 
 from src.auth.models import User
 from src.domain.cliente import Cliente
+from src.domain.entrada_estoque import EntradaEstoque
 from src.domain.item_troca import ItemTroca
 from src.domain.oleo import Oleo
 from src.domain.peca import Peca
@@ -557,6 +558,14 @@ class TrocaOleoService:
         imposto_valor = faturamento_total * (imposto_percentual / 100)
         lucro_liquido = lucro_bruto_total - imposto_valor - despesas_total
 
+        # Investimento total (compras de estoque no período)
+        invest_q = select(func.sum(EntradaEstoque.custo_total))
+        if data_inicio:
+            invest_q = invest_q.where(EntradaEstoque.data_compra >= data_inicio)
+        if data_fim:
+            invest_q = invest_q.where(EntradaEstoque.data_compra <= data_fim)
+        investimento_total = float(await self.db.scalar(invest_q) or 0)
+
         resumo = FinanceiroResumoResponse(
             total_trocas=total_trocas,
             faturamento_total=faturamento_total,
@@ -568,6 +577,7 @@ class TrocaOleoService:
             imposto_valor=round(imposto_valor, 2),
             despesas_total=round(despesas_total, 2),
             lucro_liquido=round(lucro_liquido, 2),
+            investimento_total=round(investimento_total, 2),
         )
 
         # Query paginada com relacionamentos

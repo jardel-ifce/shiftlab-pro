@@ -38,6 +38,7 @@ export interface FinanceiroResumo {
   imposto_valor: number
   despesas_total: number
   lucro_liquido: number
+  investimento_total: number
 }
 
 export interface FinanceiroListResponse {

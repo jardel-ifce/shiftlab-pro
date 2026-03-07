@@ -577,8 +577,8 @@ function TabSocios({
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="flex justify-between text-sm">
-            <span className="text-muted-foreground">Investimento (custo)</span>
-            <span className="font-medium text-red-600">{formatBRL(half(resumo.custo_total))}</span>
+            <span className="text-muted-foreground">Investimento (compras)</span>
+            <span className="font-medium text-red-600">{formatBRL(half(resumo.investimento_total))}</span>
           </div>
           <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">Faturamento</span>
@@ -696,7 +696,7 @@ function TabSocios({
                   {["Jardel Rodrigues", "Antônio William"].map((nome) => (
                     <TableRow key={nome}>
                       <TableCell className="font-medium">{nome}</TableCell>
-                      <TableCell className="text-right text-red-600">{formatBRL(half(resumo.custo_total))}</TableCell>
+                      <TableCell className="text-right text-red-600">{formatBRL(half(resumo.investimento_total))}</TableCell>
                       <TableCell className="text-right text-emerald-600">{formatBRL(half(resumo.faturamento_total))}</TableCell>
                       <TableCell className={`text-right ${half(resumo.lucro_bruto_total) >= 0 ? "text-emerald-600" : "text-red-600"}`}>
                         {formatBRL(half(resumo.lucro_bruto_total))}
@@ -710,7 +710,7 @@ function TabSocios({
                   ))}
                   <TableRow className="border-t-2 font-bold">
                     <TableCell>Total</TableCell>
-                    <TableCell className="text-right text-red-600">{formatBRL(resumo.custo_total)}</TableCell>
+                    <TableCell className="text-right text-red-600">{formatBRL(resumo.investimento_total)}</TableCell>
                     <TableCell className="text-right text-emerald-600">{formatBRL(resumo.faturamento_total)}</TableCell>
                     <TableCell className={`text-right ${resumo.lucro_bruto_total >= 0 ? "text-emerald-600" : "text-red-600"}`}>
                       {formatBRL(resumo.lucro_bruto_total)}
