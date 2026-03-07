@@ -925,13 +925,31 @@ function TabSocios({
             </div>
             <div>
               <label className="mb-1 block text-sm font-medium">Valor Total (soma dos sócios)</label>
-              <Input
-                type="text"
-                inputMode="decimal"
-                placeholder="R$ 0,00"
-                value={retForm.valor ? `R$ ${retForm.valor}` : ""}
-                onChange={(e) => handleValorChange(e.target.value)}
-              />
+              <div className="flex gap-2">
+                <Input
+                  type="text"
+                  inputMode="decimal"
+                  placeholder="R$ 0,00"
+                  value={retForm.valor ? `R$ ${retForm.valor}` : ""}
+                  onChange={(e) => handleValorChange(e.target.value)}
+                  className="flex-1"
+                />
+                {resumo && (resumo.lucro_liquido - resumo.retiradas_total) > 0 && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="shrink-0 text-xs"
+                    onClick={() => {
+                      const saldoTotal = resumo.lucro_liquido - resumo.retiradas_total
+                      const formatted = saldoTotal.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                      setRetForm((f) => ({ ...f, valor: formatted }))
+                    }}
+                  >
+                    Saldo: {formatBRL((resumo.lucro_liquido - resumo.retiradas_total) / 2)}
+                  </Button>
+                )}
+              </div>
             </div>
             <div>
               <label className="mb-1 block text-sm font-medium">Descrição</label>
