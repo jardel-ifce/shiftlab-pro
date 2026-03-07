@@ -41,6 +41,7 @@ export interface FinanceiroResumo {
   lucro_liquido: number
   investimento_total: number
   taxa_total: number
+  retiradas_total: number
 }
 
 export interface FinanceiroListResponse {

@@ -504,6 +504,7 @@ class TrocaOleoService:
         data_fim: date | None = None,
         imposto_percentual: float = 0.0,
         despesas_total: float = 0.0,
+        retiradas_total: float = 0.0,
     ) -> FinanceiroListResponse:
         """Retorna dados financeiros com lucro por troca."""
         # Base query com filtros
@@ -532,9 +533,12 @@ class TrocaOleoService:
         agg_row = agg_result.one()
 
         total_trocas = agg_row[0] or 0
-        faturamento_total = float(agg_row[1] or 0)
+        faturamento_liquido = float(agg_row[1] or 0)  # valor_total já com taxa descontada
         custo_oleo_total = float(agg_row[2] or 0)
         taxa_total = float(agg_row[3] or 0)
+
+        # Faturamento bruto = valor cobrado do cliente (antes da taxa do cartão)
+        faturamento_total = faturamento_liquido + taxa_total
 
         # Custo de peças total (via join com itens)
         custo_pecas_q = (
@@ -552,7 +556,7 @@ class TrocaOleoService:
 
         custo_pecas_total = float(await self.db.scalar(custo_pecas_q) or 0)
         custo_total_geral = custo_oleo_total + custo_pecas_total
-        lucro_bruto_total = faturamento_total - custo_total_geral
+        lucro_bruto_total = faturamento_total - custo_total_geral - taxa_total
         margem_media = (
             (lucro_bruto_total / faturamento_total) * 100
             if faturamento_total > 0
@@ -561,8 +565,7 @@ class TrocaOleoService:
         ticket_medio = faturamento_total / total_trocas if total_trocas > 0 else 0
 
         # Imposto sobre faturamento bruto (antes da taxa do cartão)
-        faturamento_bruto = faturamento_total + taxa_total
-        imposto_valor = faturamento_bruto * (imposto_percentual / 100)
+        imposto_valor = faturamento_total * (imposto_percentual / 100)
         lucro_liquido = lucro_bruto_total - imposto_valor - despesas_total
 
         # Investimento total (compras de estoque no período)
@@ -586,6 +589,7 @@ class TrocaOleoService:
             lucro_liquido=round(lucro_liquido, 2),
             investimento_total=round(investimento_total, 2),
             taxa_total=round(taxa_total, 2),
+            retiradas_total=round(retiradas_total, 2),
         )
 
         # Query paginada com relacionamentos

@@ -154,6 +154,7 @@ class FinanceiroResumoResponse(BaseModel):
     lucro_liquido: float
     investimento_total: float = 0.0
     taxa_total: float = 0.0
+    retiradas_total: float = 0.0
 
 
 class FinanceiroListResponse(BaseModel):

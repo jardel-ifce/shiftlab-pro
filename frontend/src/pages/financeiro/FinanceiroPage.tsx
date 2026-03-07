@@ -1,8 +1,9 @@
 import { useState } from "react"
-import { DollarSign, TrendingUp, TrendingDown, Search, X, Receipt, Percent, BadgeDollarSign, Save, Users } from "lucide-react"
+import { DollarSign, TrendingUp, TrendingDown, Search, X, Receipt, Percent, BadgeDollarSign, Save, Users, CreditCard, Plus, Pencil, Trash2 } from "lucide-react"
 import { useFinanceiro, useFinanceiroProdutos } from "@/hooks/useFinanceiro"
 import { useImposto, useUpdateImposto } from "@/hooks/useConfiguracoes"
 import { useBuscaCliente } from "@/hooks/useClientes"
+import { useRetiradas, useCreateRetirada, useUpdateRetirada, useDeleteRetirada } from "@/hooks/useRetiradas"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
@@ -11,8 +12,10 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import type { FinanceiroResumo, FinanceiroListResponse } from "@/types/financeiro"
 import type { Cliente } from "@/types/cliente"
+import type { Retirada } from "@/types/retirada"
 
 const TIPO_LABELS: Record<string, string> = {
   oleo: "Óleo",
@@ -191,6 +194,7 @@ export function FinanceiroPage() {
           temFiltro={!!temFiltro}
           limparFiltros={limparFiltros}
           setPage={setPage}
+          filters={Object.keys(filters).length > 0 ? { data_inicio: filters.data_inicio, data_fim: filters.data_fim } : undefined}
         />
       )}
     </div>
@@ -317,10 +321,10 @@ function TabTrocas({
       {/* Cards de resumo - Linha 1 */}
       {data?.resumo && (
         <>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Faturamento</CardTitle>
+                <CardTitle className="text-sm font-medium">Faturamento Bruto</CardTitle>
                 <DollarSign className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
@@ -329,6 +333,21 @@ function TabTrocas({
                 </div>
                 <p className="text-xs text-muted-foreground">
                   {data.resumo.total_trocas} trocas | Ticket médio {formatBRL(data.resumo.ticket_medio)}
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Taxa Cartão</CardTitle>
+                <CreditCard className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-orange-600">
+                  -{formatBRL(data.resumo.taxa_total)}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Desconto da máquina
                 </p>
               </CardContent>
             </Card>
@@ -358,7 +377,7 @@ function TabTrocas({
                   {formatBRL(data.resumo.lucro_bruto_total)}
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Faturamento - Custos
+                  Faturamento - Taxa - Custos
                 </p>
               </CardContent>
             </Card>
@@ -564,19 +583,72 @@ interface TabSociosProps {
   temFiltro: boolean
   limparFiltros: () => void
   setPage: (fn: (p: number) => number) => void
+  filters?: { data_inicio?: string; data_fim?: string }
 }
 
 function TabSocios({
   data, isLoading,
   ano, setAno, mes, setMes, dia, setDia, anos, dias,
-  temFiltro, limparFiltros, setPage,
+  temFiltro, limparFiltros, setPage, filters,
 }: TabSociosProps) {
   const resumo = data?.resumo
 
   const half = (v: number) => v / 2
 
+  // Retiradas
+  const [retPage, setRetPage] = useState(1)
+  const { data: retData, isLoading: retLoading } = useRetiradas(retPage, filters)
+  const createRetirada = useCreateRetirada()
+  const updateRetirada = useUpdateRetirada()
+  const deleteRetirada = useDeleteRetirada()
+
+  const [dialogOpen, setDialogOpen] = useState(false)
+  const [editingRet, setEditingRet] = useState<Retirada | null>(null)
+  const [retForm, setRetForm] = useState({ data: "", valor: "", descricao: "", observacoes: "" })
+
+  function openNewDialog() {
+    setEditingRet(null)
+    setRetForm({ data: new Date().toISOString().slice(0, 10), valor: "", descricao: "Retirada semanal", observacoes: "" })
+    setDialogOpen(true)
+  }
+
+  function openEditDialog(r: Retirada) {
+    setEditingRet(r)
+    setRetForm({
+      data: r.data,
+      valor: Number(r.valor).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+      descricao: r.descricao,
+      observacoes: r.observacoes || "",
+    })
+    setDialogOpen(true)
+  }
+
+  function handleValorChange(raw: string) {
+    const digits = raw.replace(/[^\d]/g, "")
+    const num = Number(digits) / 100
+    setRetForm((f) => ({ ...f, valor: num > 0 ? num.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "" }))
+  }
+
+  function handleSubmit() {
+    const valorNum = Number(retForm.valor.replace(/\./g, "").replace(",", "."))
+    if (!retForm.data || !valorNum || !retForm.descricao) return
+    const payload = {
+      data: retForm.data,
+      valor: valorNum,
+      descricao: retForm.descricao,
+      observacoes: retForm.observacoes || undefined,
+    }
+    if (editingRet) {
+      updateRetirada.mutate({ id: editingRet.id, payload }, { onSuccess: () => setDialogOpen(false) })
+    } else {
+      createRetirada.mutate(payload, { onSuccess: () => setDialogOpen(false) })
+    }
+  }
+
   function SocioCard({ nome, resumo }: { nome: string; resumo: FinanceiroResumo }) {
     const lucroLiq = half(resumo.lucro_liquido)
+    const retiradas = half(resumo.retiradas_total)
+    const saldo = lucroLiq - retiradas
     return (
       <Card className="border-2 border-primary/20">
         <CardHeader className="pb-3">
@@ -595,6 +667,10 @@ function TabSocios({
             <span className="font-medium text-emerald-600">{formatBRL(half(resumo.faturamento_total))}</span>
           </div>
           <div className="flex justify-between text-sm">
+            <span className="text-muted-foreground">Taxa Cartão</span>
+            <span className="font-medium text-orange-600">-{formatBRL(half(resumo.taxa_total))}</span>
+          </div>
+          <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">Lucro Bruto</span>
             <span className={`font-medium ${half(resumo.lucro_bruto_total) >= 0 ? "text-emerald-600" : "text-red-600"}`}>
               {formatBRL(half(resumo.lucro_bruto_total))}
@@ -608,11 +684,21 @@ function TabSocios({
             <span className="text-muted-foreground">Despesas</span>
             <span className="font-medium text-orange-600">-{formatBRL(half(resumo.despesas_total))}</span>
           </div>
-          <div className="border-t pt-3">
+          <div className="border-t pt-3 space-y-2">
             <div className="flex justify-between">
               <span className="font-bold">Lucro Líquido</span>
-              <span className={`text-xl font-bold ${lucroLiq >= 0 ? "text-emerald-600" : "text-red-600"}`}>
+              <span className={`text-lg font-bold ${lucroLiq >= 0 ? "text-emerald-600" : "text-red-600"}`}>
                 {formatBRL(lucroLiq)}
+              </span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">Retiradas</span>
+              <span className="font-medium text-orange-600">-{formatBRL(retiradas)}</span>
+            </div>
+            <div className="flex justify-between border-t pt-2">
+              <span className="font-bold">Saldo Disponível</span>
+              <span className={`text-xl font-bold ${saldo >= 0 ? "text-emerald-600" : "text-red-600"}`}>
+                {formatBRL(saldo)}
               </span>
             </div>
           </div>
@@ -694,33 +780,39 @@ function TabSocios({
                 <TableHeader>
                   <TableRow>
                     <TableHead>Sócio</TableHead>
-                    <TableHead className="text-right">Investimento</TableHead>
                     <TableHead className="text-right">Faturamento</TableHead>
                     <TableHead className="text-right">Lucro Bruto</TableHead>
                     <TableHead className="text-right">Impostos</TableHead>
                     <TableHead className="text-right">Despesas</TableHead>
-                    <TableHead className="text-right">Lucro Líquido</TableHead>
+                    <TableHead className="text-right">Lucro Líq.</TableHead>
+                    <TableHead className="text-right">Retiradas</TableHead>
+                    <TableHead className="text-right">Saldo</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {["Jardel Rodrigues", "Antônio William"].map((nome) => (
-                    <TableRow key={nome}>
-                      <TableCell className="font-medium">{nome}</TableCell>
-                      <TableCell className="text-right text-red-600">{formatBRL(half(resumo.investimento_total))}</TableCell>
-                      <TableCell className="text-right text-emerald-600">{formatBRL(half(resumo.faturamento_total))}</TableCell>
-                      <TableCell className={`text-right ${half(resumo.lucro_bruto_total) >= 0 ? "text-emerald-600" : "text-red-600"}`}>
-                        {formatBRL(half(resumo.lucro_bruto_total))}
-                      </TableCell>
-                      <TableCell className="text-right text-orange-600">-{formatBRL(half(resumo.imposto_valor))}</TableCell>
-                      <TableCell className="text-right text-orange-600">-{formatBRL(half(resumo.despesas_total))}</TableCell>
-                      <TableCell className={`text-right font-bold ${half(resumo.lucro_liquido) >= 0 ? "text-emerald-600" : "text-red-600"}`}>
-                        {formatBRL(half(resumo.lucro_liquido))}
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  {["Jardel Rodrigues", "Antônio William"].map((nome) => {
+                    const saldo = half(resumo.lucro_liquido) - half(resumo.retiradas_total)
+                    return (
+                      <TableRow key={nome}>
+                        <TableCell className="font-medium">{nome}</TableCell>
+                        <TableCell className="text-right text-emerald-600">{formatBRL(half(resumo.faturamento_total))}</TableCell>
+                        <TableCell className={`text-right ${half(resumo.lucro_bruto_total) >= 0 ? "text-emerald-600" : "text-red-600"}`}>
+                          {formatBRL(half(resumo.lucro_bruto_total))}
+                        </TableCell>
+                        <TableCell className="text-right text-orange-600">-{formatBRL(half(resumo.imposto_valor))}</TableCell>
+                        <TableCell className="text-right text-orange-600">-{formatBRL(half(resumo.despesas_total))}</TableCell>
+                        <TableCell className={`text-right font-bold ${half(resumo.lucro_liquido) >= 0 ? "text-emerald-600" : "text-red-600"}`}>
+                          {formatBRL(half(resumo.lucro_liquido))}
+                        </TableCell>
+                        <TableCell className="text-right text-orange-600">-{formatBRL(half(resumo.retiradas_total))}</TableCell>
+                        <TableCell className={`text-right font-bold ${saldo >= 0 ? "text-emerald-600" : "text-red-600"}`}>
+                          {formatBRL(saldo)}
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })}
                   <TableRow className="border-t-2 font-bold">
                     <TableCell>Total</TableCell>
-                    <TableCell className="text-right text-red-600">{formatBRL(resumo.investimento_total)}</TableCell>
                     <TableCell className="text-right text-emerald-600">{formatBRL(resumo.faturamento_total)}</TableCell>
                     <TableCell className={`text-right ${resumo.lucro_bruto_total >= 0 ? "text-emerald-600" : "text-red-600"}`}>
                       {formatBRL(resumo.lucro_bruto_total)}
@@ -730,13 +822,145 @@ function TabSocios({
                     <TableCell className={`text-right ${resumo.lucro_liquido >= 0 ? "text-emerald-600" : "text-red-600"}`}>
                       {formatBRL(resumo.lucro_liquido)}
                     </TableCell>
+                    <TableCell className="text-right text-orange-600">-{formatBRL(resumo.retiradas_total)}</TableCell>
+                    <TableCell className={`text-right ${(resumo.lucro_liquido - resumo.retiradas_total) >= 0 ? "text-emerald-600" : "text-red-600"}`}>
+                      {formatBRL(resumo.lucro_liquido - resumo.retiradas_total)}
+                    </TableCell>
                   </TableRow>
                 </TableBody>
               </Table>
             </CardContent>
           </Card>
+
+          {/* Histórico de Retiradas */}
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0">
+              <CardTitle>Histórico de Retiradas</CardTitle>
+              <Button size="sm" onClick={openNewDialog}>
+                <Plus className="mr-2 h-4 w-4" />
+                Nova Retirada
+              </Button>
+            </CardHeader>
+            <CardContent>
+              {retLoading ? (
+                <div className="space-y-2">
+                  {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-12 w-full" />)}
+                </div>
+              ) : !retData?.items.length ? (
+                <p className="py-8 text-center text-muted-foreground">Nenhuma retirada registrada.</p>
+              ) : (
+                <>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Data</TableHead>
+                        <TableHead>Descrição</TableHead>
+                        <TableHead className="text-right">Total</TableHead>
+                        <TableHead className="text-right">Por Sócio</TableHead>
+                        <TableHead className="text-right">Ações</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {retData.items.map((r) => (
+                        <TableRow key={r.id}>
+                          <TableCell>{new Date(r.data + "T00:00:00").toLocaleDateString("pt-BR")}</TableCell>
+                          <TableCell>
+                            <div className="text-sm">{r.descricao}</div>
+                            {r.observacoes && <div className="text-xs text-muted-foreground">{r.observacoes}</div>}
+                          </TableCell>
+                          <TableCell className="text-right font-medium text-orange-600">{formatBRL(r.valor)}</TableCell>
+                          <TableCell className="text-right text-muted-foreground">{formatBRL(Number(r.valor) / 2)}</TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex justify-end gap-1">
+                              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEditDialog(r)}>
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-red-600"
+                                onClick={() => { if (confirm("Excluir esta retirada?")) deleteRetirada.mutate(r.id) }}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+
+                  {retData.pages > 1 && (
+                    <div className="mt-4 flex items-center justify-center gap-2">
+                      <Button variant="outline" size="sm" disabled={retPage <= 1} onClick={() => setRetPage((p) => p - 1)}>
+                        Anterior
+                      </Button>
+                      <span className="text-sm text-muted-foreground">{retData.page} / {retData.pages}</span>
+                      <Button variant="outline" size="sm" disabled={retPage >= retData.pages} onClick={() => setRetPage((p) => p + 1)}>
+                        Próxima
+                      </Button>
+                    </div>
+                  )}
+                </>
+              )}
+            </CardContent>
+          </Card>
         </>
       )}
+
+      {/* Dialog Nova/Editar Retirada */}
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent onClose={() => setDialogOpen(false)}>
+          <DialogHeader>
+            <DialogTitle>{editingRet ? "Editar Retirada" : "Nova Retirada"}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="mb-1 block text-sm font-medium">Data</label>
+              <Input
+                type="date"
+                value={retForm.data}
+                onChange={(e) => setRetForm((f) => ({ ...f, data: e.target.value }))}
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium">Valor Total (soma dos sócios)</label>
+              <Input
+                type="text"
+                inputMode="decimal"
+                placeholder="R$ 0,00"
+                value={retForm.valor ? `R$ ${retForm.valor}` : ""}
+                onChange={(e) => handleValorChange(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium">Descrição</label>
+              <Input
+                value={retForm.descricao}
+                onChange={(e) => setRetForm((f) => ({ ...f, descricao: e.target.value }))}
+                placeholder="Ex: Retirada semanal"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium">Observações</label>
+              <Input
+                value={retForm.observacoes}
+                onChange={(e) => setRetForm((f) => ({ ...f, observacoes: e.target.value }))}
+                placeholder="Opcional"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
+            <Button
+              onClick={handleSubmit}
+              disabled={createRetirada.isPending || updateRetirada.isPending}
+            >
+              {editingRet ? "Salvar" : "Registrar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   )
 }

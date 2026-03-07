@@ -321,12 +321,19 @@ export function TrocaFormPage() {
     return oleosData.items.find((o) => o.id === Number(oleoIdValue)) || null
   }, [oleoIdValue, oleosData])
 
+  const [precoLitroManual, setPrecoLitroManual] = useState<string>("")
+
   useEffect(() => {
-    if (oleoSelecionado && !isEditing) {
-      const precoTotal = Number(oleoSelecionado.preco_litro) * Number(qtdLitros || 0)
-      setValue("valor_oleo", precoTotal.toFixed(2))
+    if (oleoSelecionado) {
+      setPrecoLitroManual(Number(oleoSelecionado.preco_litro).toFixed(2))
     }
-  }, [oleoSelecionado, qtdLitros, setValue, isEditing])
+  }, [oleoSelecionado])
+
+  useEffect(() => {
+    const preco = Number(precoLitroManual) || 0
+    const qtd = Number(qtdLitros) || 0
+    setValue("valor_oleo", (preco * qtd).toFixed(2))
+  }, [precoLitroManual, qtdLitros, setValue])
 
   // Auto-fill service price when a service is selected
   useEffect(() => {
@@ -370,6 +377,10 @@ export function TrocaFormPage() {
         proxima_troca_data: troca.proxima_troca_data || "",
         observacoes: troca.observacoes || "",
       })
+      // Set unit price from total / quantity when editing
+      const qtd = Number(troca.quantidade_litros) || 1
+      const totalOleo = Number(troca.valor_oleo) || 0
+      setPrecoLitroManual((totalOleo / qtd).toFixed(2))
       if (troca.forma_pagamento) {
         setFormasPagamento(troca.forma_pagamento.split(",").map((s) => s.trim()))
       }
@@ -746,22 +757,22 @@ export function TrocaFormPage() {
                 className="h-8 px-1 text-center text-xs"
                 {...register("quantidade_litros", { required: "Obrigatório" })}
               />
-              <div className="text-right text-xs text-muted-foreground">
-                {oleoSelecionado ? `R$ ${Number(oleoSelecionado.preco_litro).toFixed(2)}/L` : "—"}
-              </div>
               <div className="text-right">
                 <Input
                   type="text"
                   inputMode="decimal"
                   placeholder="R$ 0,00"
                   className="h-7 w-24 text-right text-xs"
-                  value={valorOleo && Number(valorOleo) ? `R$ ${Number(valorOleo).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : ""}
+                  value={precoLitroManual && Number(precoLitroManual) ? `R$ ${Number(precoLitroManual).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : ""}
                   onChange={(e) => {
                     const raw = e.target.value.replace(/[^\d]/g, "")
                     const num = Number(raw) / 100
-                    setValue("valor_oleo", num > 0 ? num.toFixed(2) : "0")
+                    setPrecoLitroManual(num > 0 ? num.toFixed(2) : "0")
                   }}
                 />
+              </div>
+              <div className="text-right text-xs font-medium">
+                {Number(valorOleo) > 0 ? `R$ ${Number(valorOleo).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "—"}
               </div>
               <div>{/* no remove for oil */}</div>
             </div>
