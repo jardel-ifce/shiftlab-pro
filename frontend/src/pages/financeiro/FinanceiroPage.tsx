@@ -483,6 +483,7 @@ function TabTrocas({
                     <TableHead>Veículo</TableHead>
                     <TableHead className="text-right">Faturamento</TableHead>
                     <TableHead className="text-right">Taxa Cartão</TableHead>
+                    <TableHead className="text-right">Imposto</TableHead>
                     <TableHead className="text-right">Custo</TableHead>
                     <TableHead className="text-right">Lucro</TableHead>
                     <TableHead className="text-right">Margem</TableHead>
@@ -492,6 +493,8 @@ function TabTrocas({
                   {data.items.map((t) => {
                     const lucro = Number(t.lucro_bruto)
                     const margem = Number(t.margem_lucro)
+                    const fatBruto = Number(t.valor_total) + Number(t.taxa_valor)
+                    const impostoTroca = fatBruto * (data.resumo.imposto_percentual / 100)
                     return (
                       <TableRow key={t.id}>
                         <TableCell>
@@ -507,6 +510,9 @@ function TabTrocas({
                         </TableCell>
                         <TableCell className="text-right text-orange-600">
                           {Number(t.taxa_valor) > 0 ? `-${formatBRL(t.taxa_valor)}` : "-"}
+                        </TableCell>
+                        <TableCell className="text-right text-orange-600">
+                          {impostoTroca > 0 ? `-${formatBRL(impostoTroca)}` : "-"}
                         </TableCell>
                         <TableCell className="text-right text-red-600">
                           {formatBRL(t.custo_total)}
