@@ -19,6 +19,7 @@ export interface TrocaFinanceiro {
   valor_total: string
   desconto_percentual: string
   desconto_valor: string
+  taxa_valor: string
   custo_oleo: string
   custo_pecas: string
   custo_total: string
@@ -39,6 +40,7 @@ export interface FinanceiroResumo {
   despesas_total: number
   lucro_liquido: number
   investimento_total: number
+  taxa_total: number
 }
 
 export interface FinanceiroListResponse {

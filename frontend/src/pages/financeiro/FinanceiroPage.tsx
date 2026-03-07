@@ -482,6 +482,7 @@ function TabTrocas({
                     <TableHead>Cliente</TableHead>
                     <TableHead>Veículo</TableHead>
                     <TableHead className="text-right">Faturamento</TableHead>
+                    <TableHead className="text-right">Taxa Cartão</TableHead>
                     <TableHead className="text-right">Custo</TableHead>
                     <TableHead className="text-right">Lucro</TableHead>
                     <TableHead className="text-right">Margem</TableHead>
@@ -503,6 +504,9 @@ function TabTrocas({
                         </TableCell>
                         <TableCell className="text-right font-medium text-emerald-600">
                           {formatBRL(t.valor_total)}
+                        </TableCell>
+                        <TableCell className="text-right text-orange-600">
+                          {Number(t.taxa_valor) > 0 ? `-${formatBRL(t.taxa_valor)}` : "-"}
                         </TableCell>
                         <TableCell className="text-right text-red-600">
                           {formatBRL(t.custo_total)}

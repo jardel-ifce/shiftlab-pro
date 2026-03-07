@@ -128,6 +128,7 @@ class TrocaFinanceiroResponse(BaseModel):
     desconto_percentual: Decimal
     desconto_valor: Decimal
     taxa_percentual: Decimal
+    taxa_valor: Decimal = Decimal("0")
     forma_pagamento: str | None = None
     custo_oleo: Decimal
     custo_pecas: Decimal
@@ -152,6 +153,7 @@ class FinanceiroResumoResponse(BaseModel):
     despesas_total: float
     lucro_liquido: float
     investimento_total: float = 0.0
+    taxa_total: float = 0.0
 
 
 class FinanceiroListResponse(BaseModel):

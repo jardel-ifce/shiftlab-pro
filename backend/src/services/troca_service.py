@@ -205,6 +205,7 @@ class TrocaOleoService:
             desconto_valor=data.desconto_valor,
             motivo_desconto=data.motivo_desconto,
             taxa_percentual=data.taxa_percentual,
+            taxa_valor=taxa_valor,
             valor_total=valor_total,
             custo_oleo=oleo.custo_litro * data.quantidade_litros,
             proxima_troca_km=data.proxima_troca_km,
@@ -340,6 +341,7 @@ class TrocaOleoService:
             if valor_total < 0:
                 valor_total = Decimal("0")
 
+            update_data["taxa_valor"] = taxa_valor
             update_data["valor_total"] = valor_total
 
         # Recalcular custo_oleo se óleo ou quantidade mudou
@@ -523,6 +525,7 @@ class TrocaOleoService:
             func.count(TrocaOleo.id),
             func.sum(TrocaOleo.valor_total),
             func.sum(TrocaOleo.custo_oleo),
+            func.sum(TrocaOleo.taxa_valor),
         ).select_from(base.subquery())
         agg_result = await self.db.execute(agg_q)
         agg_row = agg_result.one()
@@ -530,6 +533,7 @@ class TrocaOleoService:
         total_trocas = agg_row[0] or 0
         faturamento_total = float(agg_row[1] or 0)
         custo_oleo_total = float(agg_row[2] or 0)
+        taxa_total = float(agg_row[3] or 0)
 
         # Custo de peças total (via join com itens)
         custo_pecas_q = (
@@ -555,7 +559,9 @@ class TrocaOleoService:
         )
         ticket_medio = faturamento_total / total_trocas if total_trocas > 0 else 0
 
-        imposto_valor = faturamento_total * (imposto_percentual / 100)
+        # Imposto sobre faturamento bruto (antes da taxa do cartão)
+        faturamento_bruto = faturamento_total + taxa_total
+        imposto_valor = faturamento_bruto * (imposto_percentual / 100)
         lucro_liquido = lucro_bruto_total - imposto_valor - despesas_total
 
         # Investimento total (compras de estoque no período)
@@ -578,6 +584,7 @@ class TrocaOleoService:
             despesas_total=round(despesas_total, 2),
             lucro_liquido=round(lucro_liquido, 2),
             investimento_total=round(investimento_total, 2),
+            taxa_total=round(taxa_total, 2),
         )
 
         # Query paginada com relacionamentos
@@ -640,6 +647,7 @@ class TrocaOleoService:
                 desconto_percentual=t.desconto_percentual,
                 desconto_valor=t.desconto_valor,
                 taxa_percentual=t.taxa_percentual,
+                taxa_valor=t.taxa_valor,
                 custo_oleo=t.custo_oleo,
                 custo_pecas=t.custo_pecas,
                 custo_total=t.custo_total,

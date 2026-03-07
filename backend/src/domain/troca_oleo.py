@@ -140,6 +140,13 @@ class TrocaOleo(BaseModel):
         comment="Percentual de taxa (ex: taxa cartão)"
     )
 
+    taxa_valor: Mapped[Decimal] = mapped_column(
+        Numeric(10, 2),
+        default=0,
+        nullable=False,
+        comment="Valor absoluto da taxa (R$)"
+    )
+
     # Forma de pagamento
     forma_pagamento: Mapped[str | None] = mapped_column(
         String(100),
