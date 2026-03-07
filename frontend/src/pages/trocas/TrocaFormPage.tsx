@@ -749,8 +749,19 @@ export function TrocaFormPage() {
               <div className="text-right text-xs text-muted-foreground">
                 {oleoSelecionado ? `R$ ${Number(oleoSelecionado.preco_litro).toFixed(2)}/L` : "—"}
               </div>
-              <div className="text-right text-xs font-medium">
-                R$ {R(subtotalOleo)}
+              <div className="text-right">
+                <Input
+                  type="text"
+                  inputMode="decimal"
+                  placeholder="R$ 0,00"
+                  className="h-7 w-24 text-right text-xs"
+                  value={valorOleo && Number(valorOleo) ? `R$ ${Number(valorOleo).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : ""}
+                  onChange={(e) => {
+                    const raw = e.target.value.replace(/[^\d]/g, "")
+                    const num = Number(raw) / 100
+                    setValue("valor_oleo", num > 0 ? num.toFixed(2) : "0")
+                  }}
+                />
               </div>
               <div>{/* no remove for oil */}</div>
             </div>
@@ -776,7 +787,6 @@ export function TrocaFormPage() {
               )
             })}
 
-            {/* Valor do óleo (editable) hidden input */}
             <input type="hidden" {...register("valor_oleo")} />
           </div>
 
