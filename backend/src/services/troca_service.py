@@ -521,12 +521,13 @@ class TrocaOleoService:
         total = await self.db.scalar(count_q) or 0
 
         # Agregação para resumo (custo_pecas precisa ser calculado via itens)
+        sub = base.subquery()
         agg_q = select(
-            func.count(TrocaOleo.id),
-            func.sum(TrocaOleo.valor_total),
-            func.sum(TrocaOleo.custo_oleo),
-            func.sum(TrocaOleo.taxa_valor),
-        ).select_from(base.subquery())
+            func.count(sub.c.id),
+            func.sum(sub.c.valor_total),
+            func.sum(sub.c.custo_oleo),
+            func.sum(sub.c.taxa_valor),
+        )
         agg_result = await self.db.execute(agg_q)
         agg_row = agg_result.one()
 
