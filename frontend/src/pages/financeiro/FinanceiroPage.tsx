@@ -647,7 +647,7 @@ function TabSocios({
 
   function SocioCard({ nome, resumo }: { nome: string; resumo: FinanceiroResumo }) {
     const lucroLiq = half(resumo.lucro_liquido)
-    const retiradas = half(resumo.retiradas_total)
+    const retiradas = resumo.retiradas_total
     const saldo = lucroLiq - retiradas
     return (
       <Card className="border-2 border-primary/20">
@@ -791,7 +791,7 @@ function TabSocios({
                 </TableHeader>
                 <TableBody>
                   {["Jardel Rodrigues", "Antônio William"].map((nome) => {
-                    const saldo = half(resumo.lucro_liquido) - half(resumo.retiradas_total)
+                    const saldo = half(resumo.lucro_liquido) - resumo.retiradas_total
                     return (
                       <TableRow key={nome}>
                         <TableCell className="font-medium">{nome}</TableCell>
@@ -804,7 +804,7 @@ function TabSocios({
                         <TableCell className={`text-right font-bold ${half(resumo.lucro_liquido) >= 0 ? "text-emerald-600" : "text-red-600"}`}>
                           {formatBRL(half(resumo.lucro_liquido))}
                         </TableCell>
-                        <TableCell className="text-right text-orange-600">-{formatBRL(half(resumo.retiradas_total))}</TableCell>
+                        <TableCell className="text-right text-orange-600">-{formatBRL(resumo.retiradas_total)}</TableCell>
                         <TableCell className={`text-right font-bold ${saldo >= 0 ? "text-emerald-600" : "text-red-600"}`}>
                           {formatBRL(saldo)}
                         </TableCell>
@@ -822,9 +822,9 @@ function TabSocios({
                     <TableCell className={`text-right ${resumo.lucro_liquido >= 0 ? "text-emerald-600" : "text-red-600"}`}>
                       {formatBRL(resumo.lucro_liquido)}
                     </TableCell>
-                    <TableCell className="text-right text-orange-600">-{formatBRL(resumo.retiradas_total)}</TableCell>
-                    <TableCell className={`text-right ${(resumo.lucro_liquido - resumo.retiradas_total) >= 0 ? "text-emerald-600" : "text-red-600"}`}>
-                      {formatBRL(resumo.lucro_liquido - resumo.retiradas_total)}
+                    <TableCell className="text-right text-orange-600">-{formatBRL(resumo.retiradas_total * 2)}</TableCell>
+                    <TableCell className={`text-right ${(resumo.lucro_liquido - resumo.retiradas_total * 2) >= 0 ? "text-emerald-600" : "text-red-600"}`}>
+                      {formatBRL(resumo.lucro_liquido - resumo.retiradas_total * 2)}
                     </TableCell>
                   </TableRow>
                 </TableBody>
@@ -855,8 +855,8 @@ function TabSocios({
                       <TableRow>
                         <TableHead>Data</TableHead>
                         <TableHead>Descrição</TableHead>
-                        <TableHead className="text-right">Total</TableHead>
                         <TableHead className="text-right">Por Sócio</TableHead>
+                        <TableHead className="text-right">Total</TableHead>
                         <TableHead className="text-right">Ações</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -869,7 +869,7 @@ function TabSocios({
                             {r.observacoes && <div className="text-xs text-muted-foreground">{r.observacoes}</div>}
                           </TableCell>
                           <TableCell className="text-right font-medium text-orange-600">{formatBRL(r.valor)}</TableCell>
-                          <TableCell className="text-right text-muted-foreground">{formatBRL(Number(r.valor) / 2)}</TableCell>
+                          <TableCell className="text-right text-muted-foreground">{formatBRL(Number(r.valor) * 2)}</TableCell>
                           <TableCell className="text-right">
                             <div className="flex justify-end gap-1">
                               <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEditDialog(r)}>
@@ -924,7 +924,7 @@ function TabSocios({
               />
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium">Valor Total (soma dos sócios)</label>
+              <label className="mb-1 block text-sm font-medium">Valor (por sócio)</label>
               <div className="flex gap-2">
                 <Input
                   type="text"
@@ -934,19 +934,19 @@ function TabSocios({
                   onChange={(e) => handleValorChange(e.target.value)}
                   className="flex-1"
                 />
-                {resumo && (resumo.lucro_liquido - resumo.retiradas_total) > 0 && (
+                {resumo && (resumo.lucro_liquido / 2 - resumo.retiradas_total) > 0 && (
                   <Button
                     type="button"
                     variant="outline"
                     size="sm"
                     className="shrink-0 text-xs"
                     onClick={() => {
-                      const saldoTotal = resumo.lucro_liquido - resumo.retiradas_total
-                      const formatted = saldoTotal.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                      const saldoPorSocio = resumo.lucro_liquido / 2 - resumo.retiradas_total
+                      const formatted = saldoPorSocio.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
                       setRetForm((f) => ({ ...f, valor: formatted }))
                     }}
                   >
-                    Saldo: {formatBRL((resumo.lucro_liquido - resumo.retiradas_total) / 2)}
+                    Meu saldo: {formatBRL(resumo.lucro_liquido / 2 - resumo.retiradas_total)}
                   </Button>
                 )}
               </div>
