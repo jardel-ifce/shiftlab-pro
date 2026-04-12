@@ -192,12 +192,16 @@ function ItemRowAutocomplete({
         onChange={(e) => onChangeQty(e.target.value)}
       />
       <Input
-        type="number"
-        step="0.01"
-        min="0"
+        type="text"
+        inputMode="decimal"
+        placeholder="R$ 0,00"
         className="h-8 px-1 text-right text-xs"
-        value={item.valor_unitario}
-        onChange={(e) => onChangePrice(e.target.value)}
+        value={item.valor_unitario && Number(item.valor_unitario) ? `R$ ${Number(item.valor_unitario).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : ""}
+        onChange={(e) => {
+          const raw = e.target.value.replace(/[^\d]/g, "")
+          const num = Number(raw) / 100
+          onChangePrice(num > 0 ? num.toFixed(2) : "0")
+        }}
       />
       <div className="text-right text-xs font-medium">
         R$ {R(itemTotal)}
